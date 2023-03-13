@@ -12,3 +12,5 @@ path = "src/client.rs"
 [dependencies]
 bevy = { version = "0.10.0", features = ["dynamic_linking"] }
 bevy_renet = "0.0.7"
+shared = { path = "../shared/" }
+smooth-bevy-cameras = "0.8.0"

@@ -1,3 +1,11 @@
+use bevy::prelude::*;
+use plugins::MyPlugins;
+pub mod plugins;
+
 fn main() {
-    println!("Hello, world!");
+    let mut app = App::new();
+    app.add_plugins(MinimalPlugins);
+    app.add_plugins(MyPlugins);
+    
+    app.run();
 }
