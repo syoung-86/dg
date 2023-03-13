@@ -12,5 +12,6 @@ path = "src/server.rs"
 [dependencies]
 bevy = { version = "0.10.0", features = ["dynamic_linking"] }
 bevy_renet = "0.0.7"
+bincode = "1.3.3"
 serde = "1.0.155"
-shared = { path = "../shared/" }
+shared = { path = "../shared" }

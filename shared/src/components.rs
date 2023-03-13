@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct ControlledEntity;
 
 #[derive(Debug, Serialize, Deserialize, Component)]
-enum ServerMessages {
+pub enum ServerMessages {
     PlayerConnected { id: u64 },
     PlayerDisconnected { id: u64 },
 }

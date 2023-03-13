@@ -1,8 +1,12 @@
+use bevy::prelude::*;
 use bevy_renet::renet::RenetConnectionConfig;
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
 use shared::channels::{ClientChannel, ServerChannel};
+use shared::components::ServerMessages;
 use shared::PROTOCOL_ID;
 use std::{net::UdpSocket, time::SystemTime};
+
+use crate::resources::{ClientInfo, ClientLobby};
 
 pub fn client_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
@@ -29,10 +33,20 @@ pub fn new_renet_client() -> RenetClient {
     RenetClient::new(current_time, socket, connection_config, authentication).unwrap()
 }
 
-pub fn server_messages(
-    mut commands: Commands,
-    mut client: ResMut<RenetClient>,
-    mut lobby: ResMut<ClientLobby>,
-    mut network_mapping: RestMut<NetWorkMapping>,
-) {
+pub fn server_messages(mut client: ResMut<RenetClient>, mut lobby: ResMut<ClientLobby>) {
+    while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
+        let server_message: ServerMessages = bincode::deserialize(&message).unwrap();
+
+        match server_message {
+            ServerMessages::PlayerConnected { id } => {
+                println!("Player {} connected", id);
+                lobby.clients.insert(id, ClientInfo::default());
+            }
+
+            ServerMessages::PlayerDisconnected { id } => {
+                lobby.clients.remove(&id);
+                println!("Player {} disconnected", id);
+            }
+        }
+    }
 }
