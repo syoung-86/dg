@@ -1,24 +1,8 @@
-use bevy::{prelude::*, utils::HashMap};
 use bevy_renet::renet::RenetConnectionConfig;
-#[allow(unused_imports)]
-use bevy_renet::{
-    renet::{ClientAuthentication, RenetClient, RenetError},
-    RenetClientPlugin,
-};
+use bevy_renet::renet::{ClientAuthentication, RenetClient};
 use shared::channels::{ClientChannel, ServerChannel};
 use shared::PROTOCOL_ID;
 use std::{net::UdpSocket, time::SystemTime};
-
-#[derive(Debug)]
-pub struct PlayerInfo {
-    pub client_entity: Entity,
-    pub server_entity: Entity,
-}
-
-#[derive(Debug, Default, Resource)]
-pub struct ClientLobby {
-    pub players: HashMap<u64, PlayerInfo>,
-}
 
 pub fn client_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
@@ -43,4 +27,12 @@ pub fn new_renet_client() -> RenetClient {
         user_data: None,
     };
     RenetClient::new(current_time, socket, connection_config, authentication).unwrap()
+}
+
+pub fn server_messages(
+    mut commands: Commands,
+    mut client: ResMut<RenetClient>,
+    mut lobby: ResMut<ClientLobby>,
+    mut network_mapping: RestMut<NetWorkMapping>,
+) {
 }
