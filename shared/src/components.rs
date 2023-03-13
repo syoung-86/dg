@@ -9,3 +9,6 @@ pub enum ServerMessages {
     PlayerConnected { id: u64 },
     PlayerDisconnected { id: u64 },
 }
+
+#[derive(Serialize, Deserialize, Component)]
+pub struct Client;
