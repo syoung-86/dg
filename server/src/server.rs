@@ -6,6 +6,7 @@ use resources::ServerLobby;
 pub mod connection;
 pub mod plugins;
 pub mod resources;
+pub mod world;
 
 fn main() {
     let mut app = App::new();
@@ -15,5 +16,6 @@ fn main() {
     app.insert_resource(new_renet_server());
     app.insert_resource(ServerLobby::default());
     app.add_system(client_handler);
+    app.add_startup_system(create_tiles);
     app.run();
 }
