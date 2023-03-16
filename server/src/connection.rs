@@ -33,21 +33,16 @@ pub fn server_connection_config() -> RenetConnectionConfig {
 pub fn client_handler(
     mut server_lobby: ResMut<ServerLobby>,
     mut commands: Commands,
-    mut events: EventReader<ServerEvent>,
+    mut events: ResMut<Events<ServerEvent>>,
     mut new_client_event: EventWriter<ClientSetup>,
 ) {
-    for event in events.iter() {
+    for event in events.drain() {
         match event {
             ServerEvent::ClientConnected(id, _) => {
                 println!("client connected {}", id);
-                let new_client = commands
-                    .spawn(Client {
-                        id: *id,
-                        ..default()
-                    })
-                    .id();
-                server_lobby.clients.insert(*id, new_client);
-                new_client_event.send(ClientSetup(*id));
+                let new_client = commands.spawn(Client { id, ..default() }).id();
+                server_lobby.clients.insert(id, new_client);
+                new_client_event.send(ClientSetup(id));
                 println!("sendevent");
             }
 
@@ -59,4 +54,5 @@ pub fn client_handler(
             }
         }
     }
+    events.clear();
 }

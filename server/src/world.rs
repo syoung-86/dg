@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use shared::components::{Client, Instance, Player, Scope, Tile, TilePos};
+use shared::components::{Client, EntityID, Instance, Player, Scope, Tile, TilePos};
 
 use crate::{events::ClientSetup, resources::ServerLobby};
 
@@ -23,22 +23,25 @@ pub fn spawn_chunk(commands: &mut Commands, start: (u32, u32, u32)) -> Vec<Entit
     for x in start.0..end.0 {
         for z in start.2..end.2 {
             //println!("cell: {} {} {}", x, y, z);
-            tiles.push(commands.spawn((Tile, TilePos { cell: (x, y, z) })).id());
+            tiles.push(
+                commands
+                    .spawn((EntityID::Tile(Tile), TilePos { cell: (x, y, z) }))
+                    .id(),
+            );
         }
     }
     tiles
 }
-//#[bevycheck::system]
 pub fn client_setup(
     mut commands: Commands,
     server_lobby: Res<ServerLobby>,
-    mut events: EventReader<ClientSetup>,
+    mut events: ResMut<Events<ClientSetup>>,
     mut clients: Query<&mut Client>,
 ) {
-    for event in events.iter() {
+    for event in events.drain() {
         clients
             .iter_mut()
-            //.filter(|client| client.id == event.0)
+            .filter(|client| client.id == event.0)
             .for_each(|mut client| {
                 client.scope = Scope::get(TilePos { cell: (4, 0, 4) });
                 println!("client scope:{:?}", client.scope);

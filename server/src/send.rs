@@ -1,10 +1,9 @@
+use crate::events::ChunkRequest;
 use bevy::prelude::*;
 use shared::channels::ServerChannel;
-use crate::events::ChunkRequest;
 
-pub fn send_chunk(mut requests: EventReader<ChunkRequest>) {
-    for request in requests.iter() {
-    
-    }
+pub fn send_chunk(mut requests: ResMut<Events<ChunkRequest>>) {
+    for request in requests.drain() {}
+
+    requests.clear();
 }
-
