@@ -1,6 +1,10 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize, Component)]
+pub enum EntityID {
+    Tile(Tile),
+}
 #[derive(Component)]
 pub struct ControlledEntity;
 

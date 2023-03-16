@@ -30,7 +30,7 @@ fn main() {
         });
     });
 
-    app.add_system(fixed_time.in_schedule(CoreSchedule::FixedUpdate));
+    //app.add_system(fixed_time.in_schedule(CoreSchedule::FixedUpdate));
     app.add_startup_system(setup_camera);
     app.add_system(server_messages);
     app.add_system(camera_follow);
@@ -40,8 +40,4 @@ fn main() {
     app.insert_resource(ClientLobby::default());
     //app.add_system(run_fixed_update_schedule);
     app.run();
-}
-
-pub fn fixed_time() {
-    println!("fixed time");
 }

@@ -13,4 +13,5 @@ pub enum TickSet {
     SendChunk,
     SendUnreliable,
     SendReliable,
+    Clear,
 }
