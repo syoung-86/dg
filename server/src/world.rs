@@ -35,9 +35,7 @@ pub fn client_setup(
     mut events: EventReader<ClientSetup>,
     mut clients: Query<&mut Client>,
 ) {
-    println!("event");
     for event in events.iter() {
-        println!("event");
         clients
             .iter_mut()
             //.filter(|client| client.id == event.0)

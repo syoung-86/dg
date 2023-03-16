@@ -36,7 +36,6 @@ pub fn client_handler(
     mut events: EventReader<ServerEvent>,
     mut new_client_event: EventWriter<ClientSetup>,
 ) {
-    println!("this should print every 100ms");
     for event in events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _) => {

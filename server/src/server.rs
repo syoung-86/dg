@@ -13,6 +13,7 @@ pub mod events;
 pub mod plugins;
 pub mod resources;
 pub mod world;
+pub mod send;
 
 fn main() {
     let mut app = App::new();
@@ -27,6 +28,7 @@ fn main() {
             .in_set(TickSet::Connection)
             .in_schedule(CoreSchedule::FixedUpdate),
     );
+    app.add_system(send_chunk.in_set(TickSet::SendChunk).in_schedule(CoreSchedule::FixedUpdate));
 
     app.add_startup_system(create_tiles);
     app.add_event::<ClientSetup>();
