@@ -6,9 +6,9 @@ use bevy_renet::{
 use shared::channels::{ClientChannel, ServerChannel};
 use shared::components::Client;
 use shared::PROTOCOL_ID;
-use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
+use std::{net::UdpSocket, time::SystemTime};
 
-use crate::resources::ServerLobby;
+use crate::{events::ClientSetup, resources::ServerLobby};
 
 pub fn new_renet_server() -> RenetServer {
     let server_addr = "127.0.0.1:5000".parse().unwrap();
@@ -34,13 +34,22 @@ pub fn client_handler(
     mut server_lobby: ResMut<ServerLobby>,
     mut commands: Commands,
     mut events: EventReader<ServerEvent>,
+    mut new_client_event: EventWriter<ClientSetup>,
 ) {
+    println!("this should print every 100ms");
     for event in events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _) => {
                 println!("client connected {}", id);
-                let new_client = commands.spawn(Client).id();
+                let new_client = commands
+                    .spawn(Client {
+                        id: *id,
+                        ..default()
+                    })
+                    .id();
                 server_lobby.clients.insert(*id, new_client);
+                new_client_event.send(ClientSetup(*id));
+                println!("sendevent");
             }
 
             ServerEvent::ClientDisconnected(id) => {
