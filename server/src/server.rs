@@ -57,15 +57,17 @@ pub fn send_chunk(
 ) {
     for request in requests.drain() {
         for client in clients.iter() {
-            let scope: Vec<(Entity, EntityType, TilePos)> = query
-                .iter()
-                .filter(|(_entity, _entity_type, pos)| client.scope.check(**pos))
-                .map(|(entity, ty, pos)| (entity, ty.clone(), *pos))
-                .collect();
-            let message = bincode::serialize(&scope).unwrap();
-            server.send_message(client.id, ServerChannel::Load, message);
+            if client.id == request.0 {
+                let scope: Vec<(Entity, EntityType, TilePos)> = query
+                    .iter()
+                    .filter(|(_entity, _entity_type, pos)| client.scope.check(**pos))
+                    .map(|(entity, ty, pos)| (entity, ty.clone(), *pos))
+                    .collect();
+                let message = bincode::serialize(&scope).unwrap();
+                server.send_message(client.id, ServerChannel::Load, message);
 
-            println!("Request: {:?}", request);
+                println!("Request: {:?}", request);
+            }
         }
     }
 }

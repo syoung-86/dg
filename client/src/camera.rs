@@ -5,7 +5,7 @@ pub fn setup_camera(mut commands: Commands) {
     commands
         .spawn(LookTransformBundle {
             transform: LookTransform {
-                eye: Vec3::new(10.0, 16., 0.5),
+                eye: Vec3::new(10.0, 10., 0.5),
                 target: Vec3::new(0.0, 0.0, 0.0),
                 up: Vec3::Y,
             },

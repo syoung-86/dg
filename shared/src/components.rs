@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Component)]
 pub enum EntityType {
     Tile,
+    Player(Player),
 }
 #[derive(Component)]
 pub struct ControlledEntity;
@@ -26,10 +27,11 @@ pub struct TilePos {
 
 impl TilePos {
     pub fn to_transform(&self) -> Transform {
-        let mut transform = Vec3::new(0.0, -1.0, 0.0);
+        let mut transform = Vec3::new(0.0, 0.0, 0.0);
         transform[0] = self.cell.0 as f32;
+        transform[1] = self.cell.1 as f32;
         transform[2] = self.cell.2 as f32;
-        Transform::from_xyz(transform[0], 0., transform[2])
+        Transform::from_xyz(transform[0], transform[1], transform[2])
     }
 }
 
@@ -98,5 +100,7 @@ impl Scope {
     }
 }
 
-#[derive(Serialize, Deserialize, Component)]
-pub struct Player;
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub struct Player {
+    pub id: u64,
+}

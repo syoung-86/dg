@@ -3,7 +3,8 @@ use bevy_renet::{
     renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
     RenetServerPlugin,
 };
-use shared::components::Client;
+use rand::Rng;
+use shared::components::{Client, EntityType};
 use shared::PROTOCOL_ID;
 use shared::{
     channels::{ClientChannel, ServerChannel},
@@ -41,21 +42,28 @@ pub fn client_handler(
     mut commands: Commands,
     mut events: ResMut<Events<ServerEvent>>,
     mut request_event: EventWriter<ChunkRequest>,
+    mut server: ResMut<RenetServer>,
 ) {
     for event in events.drain() {
         match event {
             ServerEvent::ClientConnected(id, _) => {
                 println!("client connected {}", id);
                 let new_client = commands
+                    .spawn((Client {
+                        id,
+                        scope: Scope::get(TilePos { cell: (4, 0, 4) }),
+                    },))
+                    .id();
+                let mut rng = rand::thread_rng();
+                let x: u32 = rng.gen_range(0..10);
+                let player = commands
                     .spawn((
-                        Player,
-                        TilePos { cell: (4, 0, 0) },
-                        Client {
-                            id,
-                            scope: Scope::get(TilePos { cell: (4, 0, 4) }),
-                        },
+                        EntityType::Player(Player { id }),
+                        TilePos { cell: (x, 1, 4) },
                     ))
                     .id();
+                commands.entity(new_client).push_children(&[player]);
+
                 request_event.send(ChunkRequest(id));
                 server_lobby.clients.insert(id, new_client);
             }
@@ -63,7 +71,9 @@ pub fn client_handler(
             ServerEvent::ClientDisconnected(id) => {
                 println!("client disconnected {}", id);
                 if let Some((_, client_entity)) = server_lobby.clients.remove_entry(&id) {
-                    commands.entity(client_entity).despawn();
+                    commands.entity(client_entity).despawn_recursive();
+                    let message = bincode::serialize(&id).unwrap();
+                    server.broadcast_message(ServerChannel::Despawn, message);
                 }
             }
         }
