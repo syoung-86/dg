@@ -1,19 +1,22 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
+use bevy_renet::{renet::RenetServer, RenetServerPlugin};
 use connection::{client_handler, new_renet_server};
 use events::{ChunkRequest, ClientSetup};
 use plugins::{ClearEventPlugin, ConfigPlugin};
 use resources::ServerLobby;
-use send::send_chunk;
-use shared::TickSet;
-use world::{client_setup, create_tiles};
+use shared::{
+    channels::ServerChannel,
+    components::{Client, EntityType, TilePos},
+    TickSet,
+};
+use world::create_tiles;
 
 pub mod connection;
 pub mod events;
 pub mod plugins;
 pub mod resources;
-pub mod send;
 pub mod world;
 
 fn main() {
@@ -27,11 +30,9 @@ fn main() {
     app.init_resource::<ServerLobby>();
     app.init_resource::<Events<ChunkRequest>>();
     app.init_resource::<Events<ClientSetup>>();
-    app.add_systems(
-        (
-            client_handler.in_set(TickSet::Connection),
-            client_setup.in_set(TickSet::Connection),
-        )
+    app.add_system(
+        client_handler
+            .in_set(TickSet::Connection)
             .in_schedule(CoreSchedule::FixedUpdate),
     );
     app.add_system(
@@ -40,7 +41,31 @@ fn main() {
             .in_schedule(CoreSchedule::FixedUpdate),
     );
 
+    app.add_systems(
+        (RenetServerPlugin::get_clear_event_systems().in_set(TickSet::Clear))
+            .in_schedule(CoreSchedule::FixedUpdate),
+    );
     app.add_startup_system(create_tiles);
     app.add_event::<ClientSetup>();
     app.run();
+}
+pub fn send_chunk(
+    query: Query<(Entity, &EntityType, &TilePos)>,
+    mut requests: ResMut<Events<ChunkRequest>>,
+    clients: Query<&Client>,
+    mut server: ResMut<RenetServer>,
+) {
+    for request in requests.drain() {
+        for client in clients.iter() {
+            let scope: Vec<(Entity, EntityType, TilePos)> = query
+                .iter()
+                .filter(|(_entity, _entity_type, pos)| client.scope.check(**pos))
+                .map(|(entity, ty, pos)| (entity, ty.clone(), *pos))
+                .collect();
+            let message = bincode::serialize(&scope).unwrap();
+            server.send_message(client.id, ServerChannel::Load, message);
+
+            println!("Request: {:?}", request);
+        }
+    }
 }

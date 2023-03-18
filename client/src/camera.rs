@@ -5,7 +5,7 @@ pub fn setup_camera(mut commands: Commands) {
     commands
         .spawn(LookTransformBundle {
             transform: LookTransform {
-                eye: Vec3::new(0.0, 16., -4.5),
+                eye: Vec3::new(10.0, 16., 0.5),
                 target: Vec3::new(0.0, 0.0, 0.0),
                 up: Vec3::Y,
             },
@@ -13,7 +13,7 @@ pub fn setup_camera(mut commands: Commands) {
         })
         .insert((
             Camera3dBundle {
-                transform: Transform::from_xyz(0., 8.0, 0.0)
+                transform: Transform::from_xyz(10., 16.0, 0.0)
                     .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
                 ..default()
             },

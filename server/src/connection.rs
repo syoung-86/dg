@@ -3,12 +3,18 @@ use bevy_renet::{
     renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
     RenetServerPlugin,
 };
-use shared::channels::{ClientChannel, ServerChannel};
 use shared::components::Client;
 use shared::PROTOCOL_ID;
+use shared::{
+    channels::{ClientChannel, ServerChannel},
+    components::{Player, Scope, TilePos},
+};
 use std::{net::UdpSocket, time::SystemTime};
 
-use crate::{events::ClientSetup, resources::ServerLobby};
+use crate::{
+    events::{ChunkRequest, ClientSetup},
+    resources::ServerLobby,
+};
 
 pub fn new_renet_server() -> RenetServer {
     let server_addr = "127.0.0.1:5000".parse().unwrap();
@@ -34,16 +40,24 @@ pub fn client_handler(
     mut server_lobby: ResMut<ServerLobby>,
     mut commands: Commands,
     mut events: ResMut<Events<ServerEvent>>,
-    mut new_client_event: EventWriter<ClientSetup>,
+    mut request_event: EventWriter<ChunkRequest>,
 ) {
     for event in events.drain() {
         match event {
             ServerEvent::ClientConnected(id, _) => {
                 println!("client connected {}", id);
-                let new_client = commands.spawn(Client { id, ..default() }).id();
+                let new_client = commands
+                    .spawn((
+                        Player,
+                        TilePos { cell: (4, 0, 0) },
+                        Client {
+                            id,
+                            scope: Scope::get(TilePos { cell: (4, 0, 4) }),
+                        },
+                    ))
+                    .id();
+                request_event.send(ChunkRequest(id));
                 server_lobby.clients.insert(id, new_client);
-                new_client_event.send(ClientSetup(id));
-                println!("sendevent");
             }
 
             ServerEvent::ClientDisconnected(id) => {
@@ -54,5 +68,4 @@ pub fn client_handler(
             }
         }
     }
-    events.clear();
 }

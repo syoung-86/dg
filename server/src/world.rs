@@ -1,13 +1,11 @@
 use bevy::prelude::*;
-use shared::components::{Client, EntityID, Instance, Player, Scope, Tile, TilePos};
-
-use crate::{events::ClientSetup, resources::ServerLobby};
+use shared::components::{Client, EntityType, Instance, Player, Scope, Tile, TilePos};
 
 pub fn create_tiles(mut commands: Commands) {
+    let instance = commands.spawn(Instance).id();
     let y: u32 = 0;
     for x in (0..100).step_by(10) {
         for z in (0..100).step_by(10) {
-            let instance = commands.spawn(Instance).id();
             let tiles = spawn_chunk(&mut commands, (x, y, z));
             for child in tiles {
                 commands.entity(instance).push_children(&[child]);
@@ -22,34 +20,12 @@ pub fn spawn_chunk(commands: &mut Commands, start: (u32, u32, u32)) -> Vec<Entit
     let mut tiles = vec![];
     for x in start.0..end.0 {
         for z in start.2..end.2 {
-            //println!("cell: {} {} {}", x, y, z);
             tiles.push(
                 commands
-                    .spawn((EntityID::Tile(Tile), TilePos { cell: (x, y, z) }))
+                    .spawn((EntityType::Tile, TilePos { cell: (x, y, z) }))
                     .id(),
             );
         }
     }
     tiles
-}
-pub fn client_setup(
-    mut commands: Commands,
-    server_lobby: Res<ServerLobby>,
-    mut events: ResMut<Events<ClientSetup>>,
-    mut clients: Query<&mut Client>,
-) {
-    for event in events.drain() {
-        clients
-            .iter_mut()
-            .filter(|client| client.id == event.0)
-            .for_each(|mut client| {
-                client.scope = Scope::get(TilePos { cell: (4, 0, 4) });
-                println!("client scope:{:?}", client.scope);
-            });
-        if let Some(client_entity) = server_lobby.clients.get(&event.0) {
-            commands
-                .entity(*client_entity)
-                .insert((Player, TilePos { cell: (4, 0, 4) }));
-        }
-    }
 }
