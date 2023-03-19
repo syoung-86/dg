@@ -4,17 +4,19 @@ use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     prelude::*,
 };
-use bevy_inspector_egui::quick::ResourceInspectorPlugin;
-use bevy_inspector_egui::{prelude::*, quick::WorldInspectorPlugin};
+
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_renet::{renet::RenetClient, RenetClientPlugin};
 use camera::{camera_follow, setup_camera};
 use connection::{new_renet_client, server_messages};
+use leafwing_input_manager::prelude::*;
 use rand::Rng;
 use resources::{ClientLobby, NetworkMapping};
 use shared::{
     channels::ServerChannel,
     components::{ControlledEntity, EntityType, Player, TilePos},
 };
+use smooth_bevy_cameras::{LookTransformPlugin, controllers::{orbit::OrbitCameraPlugin, unreal::UnrealCameraPlugin}};
 pub mod camera;
 pub mod components;
 pub mod connection;
@@ -22,6 +24,13 @@ pub mod plugins;
 pub mod resources;
 pub mod run_conditions;
 
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+pub enum Move {
+    North,
+    South,
+    West,
+    East,
+}
 fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins);
@@ -29,6 +38,7 @@ fn main() {
         clear_events: false,
     });
 
+    app.add_plugin(InputManagerPlugin::<Move>::default());
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
     app.edit_schedule(CoreSchedule::Main, |schedule| {
         schedule.set_build_settings(ScheduleBuildSettings {
@@ -37,6 +47,8 @@ fn main() {
         });
     });
     app.add_plugin(WorldInspectorPlugin::default());
+    app.add_plugin(LookTransformPlugin);
+    //app.add_plugin(UnrealCameraPlugin::default());
 
     //app.add_system(fixed_time.in_schedule(CoreSchedule::FixedUpdate));
     app.add_startup_system(setup_camera);
@@ -48,10 +60,45 @@ fn main() {
     app.insert_resource(NetworkMapping::default());
     app.insert_resource(ClientLobby::default());
     app.add_system(despawn);
+    app.add_system(movement);
     //app.add_system(run_fixed_update_schedule);
     app.run();
 }
 
+pub fn movement(
+    mut commands: Commands,
+    mut query: Query<(&ControlledEntity, &mut Transform)>,
+    mut input: Query<&ActionState<Move>, With<Player>>,
+) {
+    if let Ok(action_state) = input.get_single() {
+        if action_state.just_pressed(Move::North) {
+            if let Ok((_, mut transform)) = query.get_single_mut() {
+                transform.translation[2] -= 1.;
+            }
+            println!("move up");
+        }
+
+        if action_state.just_pressed(Move::South) {
+            if let Ok((_, mut transform)) = query.get_single_mut() {
+                transform.translation[2] += 1.;
+            }
+            println!("move up");
+        }
+
+        if action_state.just_pressed(Move::West) {
+            if let Ok((_, mut transform)) = query.get_single_mut() {
+                transform.translation[0] -= 1.;
+            }
+            println!("move up");
+        }
+        if action_state.just_pressed(Move::East) {
+            if let Ok((_, mut transform)) = query.get_single_mut() {
+                transform.translation[0] += 1.;
+            }
+            println!("move up");
+        }
+    }
+}
 pub fn load(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -67,7 +114,7 @@ pub fn load(
             match entity_type {
                 EntityType::Tile => {
                     let mut rng = rand::thread_rng();
-                    let color: f32 = rng.gen_range(0.9..1.0);
+                    let color: f32 = rng.gen_range(0.4..0.6);
                     let transform = t.to_transform();
                     let new_player = commands
                         .spawn((
@@ -109,7 +156,18 @@ pub fn load(
                         //.forward_events::<PointerDown, PickingEvent>()
                         .id();
                     if player.id == client.client_id() {
-                        commands.entity(new_player).insert(ControlledEntity);
+                        commands.entity(new_player).insert((
+                            ControlledEntity,
+                            InputManagerBundle::<Move> {
+                                action_state: ActionState::default(),
+                                input_map: InputMap::new([
+                                    (KeyCode::W, Move::North),
+                                    (KeyCode::S, Move::South),
+                                    (KeyCode::D, Move::East),
+                                    (KeyCode::A, Move::West),
+                                ]),
+                            },
+                        ));
                     }
                     commands.entity(new_player).insert(player);
                     network_mapping.client_to_server.insert(new_player, e);
