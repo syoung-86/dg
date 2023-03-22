@@ -4,9 +4,9 @@ use bevy_renet::{
     RenetServerPlugin,
 };
 use rand::Rng;
-use shared::components::{Client, EntityType};
-use shared::PROTOCOL_ID;
-use shared::{
+use lib::components::{Client, EntityType};
+use lib::PROTOCOL_ID;
+use lib::{
     channels::{ClientChannel, ServerChannel},
     components::{Player, Scope, TilePos},
 };

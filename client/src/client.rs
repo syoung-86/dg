@@ -4,6 +4,7 @@ use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     prelude::*,
 };
+use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickableMesh, PickingEvent};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_renet::{renet::RenetClient, RenetClientPlugin};
@@ -12,11 +13,14 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use rand::Rng;
 use resources::{ClientLobby, NetworkMapping};
-use shared::{
+use lib::{
     channels::ServerChannel,
     components::{ControlledEntity, EntityType, Player, TilePos},
 };
-use smooth_bevy_cameras::{LookTransformPlugin, controllers::{orbit::OrbitCameraPlugin, unreal::UnrealCameraPlugin}};
+use smooth_bevy_cameras::{
+    controllers::{orbit::OrbitCameraPlugin, unreal::UnrealCameraPlugin},
+    LookTransformPlugin,
+};
 pub mod camera;
 pub mod components;
 pub mod connection;
@@ -39,6 +43,7 @@ fn main() {
     });
 
     app.add_plugin(InputManagerPlugin::<Move>::default());
+    app.add_plugins(DefaultPickingPlugins);
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
     app.edit_schedule(CoreSchedule::Main, |schedule| {
         schedule.set_build_settings(ScheduleBuildSettings {
@@ -61,41 +66,46 @@ fn main() {
     app.insert_resource(ClientLobby::default());
     app.add_system(despawn);
     app.add_system(movement);
+    app.add_system(make_pickable);
     //app.add_system(run_fixed_update_schedule);
     app.run();
 }
-
-pub fn movement(
+fn make_pickable(
     mut commands: Commands,
-    mut query: Query<(&ControlledEntity, &mut Transform)>,
-    mut input: Query<&ActionState<Move>, With<Player>>,
+    meshes: Query<Entity, (With<Handle<Mesh>>, Without<PickableMesh>)>,
 ) {
-    if let Ok(action_state) = input.get_single() {
-        if action_state.just_pressed(Move::North) {
-            if let Ok((_, mut transform)) = query.get_single_mut() {
+    for entity in meshes.iter() {
+        commands.entity(entity).insert((
+            PickableBundle::default(),
+        ));
+    }
+}
+pub fn movement(
+    mut query: Query<(&ControlledEntity, &mut Transform)>,
+    input: Query<(Entity, &ActionState<Move>), With<Player>>,
+    mut client: ResMut<RenetClient>,
+    mut commands: Commands,
+) {
+    if let Ok((entity, action_state)) = input.get_single() {
+        if let Ok((_, mut transform)) = query.get_single_mut() {
+            if action_state.just_pressed(Move::North) {
                 transform.translation[2] -= 1.;
             }
-            println!("move up");
-        }
-
-        if action_state.just_pressed(Move::South) {
-            if let Ok((_, mut transform)) = query.get_single_mut() {
+            if action_state.just_pressed(Move::South) {
                 transform.translation[2] += 1.;
+                println!("move up");
             }
-            println!("move up");
-        }
 
-        if action_state.just_pressed(Move::West) {
-            if let Ok((_, mut transform)) = query.get_single_mut() {
+            if action_state.just_pressed(Move::West) {
                 transform.translation[0] -= 1.;
+                println!("move up");
             }
-            println!("move up");
-        }
-        if action_state.just_pressed(Move::East) {
-            if let Ok((_, mut transform)) = query.get_single_mut() {
+            if action_state.just_pressed(Move::East) {
                 transform.translation[0] += 1.;
+                println!("move up");
             }
-            println!("move up");
+            let new_pos = TilePos::from_xyz(&transform.translation);
+            commands.entity(entity).insert(new_pos);
         }
     }
 }

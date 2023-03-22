@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetConnectionConfig;
 use bevy_renet::renet::{ClientAuthentication, RenetClient};
-use shared::channels::{ClientChannel, ServerChannel};
-use shared::components::ServerMessages;
-use shared::PROTOCOL_ID;
+use lib::channels::{ClientChannel, ServerChannel};
+use lib::components::ServerMessages;
+use lib::PROTOCOL_ID;
 use std::{net::UdpSocket, time::SystemTime};
 
 use crate::resources::{ClientInfo, ClientLobby};

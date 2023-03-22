@@ -1,7 +1,8 @@
 use std::f32::consts::{PI, TAU};
+use bevy_mod_picking::PickingCameraBundle;
 
 use bevy::prelude::*;
-use shared::components::ControlledEntity;
+use lib::components::ControlledEntity;
 use smooth_bevy_cameras::{
     controllers::{
         orbit::{OrbitCameraBundle, OrbitCameraController},
@@ -24,7 +25,7 @@ pub fn setup_camera(mut commands: Commands) {
     Camera3dBundle {
     transform: cam_transform,
     ..default()
-    },
+    }, PickingCameraBundle::default(),
     //PickRaycastSource::default(),
     ));
     //commands
@@ -54,7 +55,6 @@ pub fn camera_follow(
 ) {
     let mut cam_transform = camera_query.single_mut();
     if let Ok(player_transform) = player_query.get_single() {
-        println!("player_transform: {:?}", cam_transform);
         cam_transform.eye.x = player_transform.translation.x;
         cam_transform.eye.z = player_transform.translation.z + 2.5;
         cam_transform.target = player_transform.translation;

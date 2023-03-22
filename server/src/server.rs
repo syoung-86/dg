@@ -6,7 +6,7 @@ use connection::{client_handler, new_renet_server};
 use events::{ChunkRequest, ClientSetup};
 use plugins::{ClearEventPlugin, ConfigPlugin};
 use resources::ServerLobby;
-use shared::{
+use lib::{
     channels::ServerChannel,
     components::{Client, EntityType, TilePos},
     TickSet,
@@ -49,6 +49,10 @@ fn main() {
     app.add_event::<ClientSetup>();
     app.run();
 }
+
+pub fn tick(tick: ResMut<Tick>){
+
+}
 pub fn send_chunk(
     query: Query<(Entity, &EntityType, &TilePos)>,
     mut requests: ResMut<Events<ChunkRequest>>,
@@ -66,7 +70,6 @@ pub fn send_chunk(
                 let message = bincode::serialize(&scope).unwrap();
                 server.send_message(client.id, ServerChannel::Load, message);
 
-                println!("Request: {:?}", request);
             }
         }
     }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_renet::RenetServerPlugin;
-use shared::TickSet;
+use lib::TickSet;
 
 use crate::events::{clear_event, ChunkRequest, ClientSetup};
 

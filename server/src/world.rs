@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use shared::components::{Client, EntityType, Instance, Player, Scope, Tile, TilePos};
+use lib::components::{Client, EntityType, Instance, Player, Scope, Tile, TilePos};
 
 pub fn create_tiles(mut commands: Commands) {
     let instance = commands.spawn(Instance).id();
