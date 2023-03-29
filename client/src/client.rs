@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
+    input::mouse,
     prelude::*,
 };
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickableMesh, PickingEvent};
@@ -11,16 +12,21 @@ use bevy_renet::{renet::RenetClient, RenetClientPlugin};
 use camera::{camera_follow, setup_camera};
 use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
+use lib::{
+    channels::{ClientChannel, ServerChannel},
+    components::{ControlledEntity, EntityType, LeftClick, Player, Tile, Path},
+    resources::Tick,
+    ClickEvent,
+};
+use movement::get_path;
 use rand::Rng;
 use resources::{ClientLobby, NetworkMapping};
-use lib::{
-    channels::ServerChannel,
-    components::{ControlledEntity, EntityType, Player, TilePos},
-};
+use serde::{Deserialize, Serialize};
 use smooth_bevy_cameras::{
     controllers::{orbit::OrbitCameraPlugin, unreal::UnrealCameraPlugin},
     LookTransformPlugin,
 };
+pub mod movement;
 pub mod camera;
 pub mod components;
 pub mod connection;
@@ -45,6 +51,7 @@ fn main() {
     app.add_plugin(InputManagerPlugin::<Move>::default());
     app.add_plugins(DefaultPickingPlugins);
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
+    app.insert_resource(Tick::default());
     app.edit_schedule(CoreSchedule::Main, |schedule| {
         schedule.set_build_settings(ScheduleBuildSettings {
             ambiguity_detection: LogLevel::Ignore,
@@ -55,58 +62,54 @@ fn main() {
     app.add_plugin(LookTransformPlugin);
     //app.add_plugin(UnrealCameraPlugin::default());
 
-    //app.add_system(fixed_time.in_schedule(CoreSchedule::FixedUpdate));
     app.add_startup_system(setup_camera);
     app.add_system(server_messages);
     app.add_system(camera_follow);
     app.add_system(load);
     app.insert_resource(new_renet_client());
-    app.add_systems(().distributive_run_if(bevy_renet::client_connected));
     app.insert_resource(NetworkMapping::default());
     app.insert_resource(ClientLobby::default());
     app.add_system(despawn);
-    app.add_system(movement);
+    app.add_system(get_path);
     app.add_system(make_pickable);
-    //app.add_system(run_fixed_update_schedule);
+    app.add_system(mouse_input);
+    app.add_system(receive_tick);
+    app.add_event::<ClickEvent>();
     app.run();
+}
+
+pub fn receive_tick(mut client: ResMut<RenetClient>, mut tick: ResMut<Tick>) {
+    if let Some(message) = client.receive_message(ServerChannel::Tick) {
+        let new_tick: Tick = bincode::deserialize(&message).unwrap();
+        tick.tick = new_tick.tick;
+    }
+}
+
+pub fn mouse_input(
+    mut click_event: EventWriter<ClickEvent>,
+    mut events: EventReader<PickingEvent>,
+    query: Query<(Entity, &LeftClick, &Tile)>,
+) {
+    for event in events.iter() {
+        match event {
+            PickingEvent::Clicked(clicked_entity) => {
+                query
+                    .iter()
+                    .filter(|(entity, _action, _)| entity == clicked_entity)
+                    .for_each(|(entity, action, tile)| {
+                        click_event.send(ClickEvent{target: entity, left_click: *action, destination: *tile,})
+                    });
+            }
+            _ => (),
+        }
+    }
 }
 fn make_pickable(
     mut commands: Commands,
     meshes: Query<Entity, (With<Handle<Mesh>>, Without<PickableMesh>)>,
 ) {
     for entity in meshes.iter() {
-        commands.entity(entity).insert((
-            PickableBundle::default(),
-        ));
-    }
-}
-pub fn movement(
-    mut query: Query<(&ControlledEntity, &mut Transform)>,
-    input: Query<(Entity, &ActionState<Move>), With<Player>>,
-    mut client: ResMut<RenetClient>,
-    mut commands: Commands,
-) {
-    if let Ok((entity, action_state)) = input.get_single() {
-        if let Ok((_, mut transform)) = query.get_single_mut() {
-            if action_state.just_pressed(Move::North) {
-                transform.translation[2] -= 1.;
-            }
-            if action_state.just_pressed(Move::South) {
-                transform.translation[2] += 1.;
-                println!("move up");
-            }
-
-            if action_state.just_pressed(Move::West) {
-                transform.translation[0] -= 1.;
-                println!("move up");
-            }
-            if action_state.just_pressed(Move::East) {
-                transform.translation[0] += 1.;
-                println!("move up");
-            }
-            let new_pos = TilePos::from_xyz(&transform.translation);
-            commands.entity(entity).insert(new_pos);
-        }
+        commands.entity(entity).insert((PickableBundle::default(),));
     }
 }
 pub fn load(
@@ -117,7 +120,7 @@ pub fn load(
     mut network_mapping: ResMut<NetworkMapping>,
 ) {
     if let Some(message) = client.receive_message(ServerChannel::Load) {
-        let scope: Vec<(Entity, EntityType, TilePos)> = bincode::deserialize(&message).unwrap();
+        let scope: Vec<(Entity, EntityType, Tile)> = bincode::deserialize(&message).unwrap();
 
         for (e, entity_type, t) in scope {
             //println!("tile: {:?}", t);
@@ -138,7 +141,7 @@ pub fn load(
                             //PickRaycastTarget::default(),
                             //NoDeselect,
                             t,
-                            //LeftClick::default(),
+                            LeftClick::Walk,
                         ))
                         //.forward_events::<PointerDown, PickingEvent>()
                         .id();

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use lib::components::{Client, EntityType, Instance, Player, Scope, Tile, TilePos};
+use lib::components::{Client, EntityType, Instance, Player, Scope, Tile};
 
 pub fn create_tiles(mut commands: Commands) {
     let instance = commands.spawn(Instance).id();
@@ -22,7 +22,7 @@ pub fn spawn_chunk(commands: &mut Commands, start: (u32, u32, u32)) -> Vec<Entit
         for z in start.2..end.2 {
             tiles.push(
                 commands
-                    .spawn((EntityType::Tile, TilePos { cell: (x, y, z) }))
+                    .spawn((EntityType::Tile, Tile { cell: (x, y, z) }))
                     .id(),
             );
         }

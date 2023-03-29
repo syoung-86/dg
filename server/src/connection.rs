@@ -8,7 +8,7 @@ use lib::components::{Client, EntityType};
 use lib::PROTOCOL_ID;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{Player, Scope, TilePos},
+    components::{Player, Scope, Tile},
 };
 use std::{net::UdpSocket, time::SystemTime};
 
@@ -51,7 +51,7 @@ pub fn client_handler(
                 let new_client = commands
                     .spawn((Client {
                         id,
-                        scope: Scope::get(TilePos { cell: (4, 0, 4) }),
+                        scope: Scope::get(Tile { cell: (4, 0, 4) }),
                     },))
                     .id();
                 let mut rng = rand::thread_rng();
@@ -59,7 +59,7 @@ pub fn client_handler(
                 let player = commands
                     .spawn((
                         EntityType::Player(Player { id }),
-                        TilePos { cell: (x, 1, 4) },
+                        Tile { cell: (x, 0, 4) },
                     ))
                     .id();
                 commands.entity(new_client).push_children(&[player]);

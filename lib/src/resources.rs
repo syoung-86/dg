@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Default,Serialize, Deserialize, Eq, PartialEq, Debug, Resource)]
+#[derive(Copy, Clone, Default,Serialize, Deserialize, Eq, PartialEq, Debug, Resource)]
 pub struct Tick{
-    tick: u64,
+    pub tick: u64,
 }

@@ -6,6 +6,7 @@ use std::time::Duration;
 pub enum ClientChannel {
     Input,
     Command,
+    Click,
 }
 
 impl From<ClientChannel> for u8 {
@@ -13,6 +14,7 @@ impl From<ClientChannel> for u8 {
         match channel_id {
             ClientChannel::Command => 0,
             ClientChannel::Input => 1,
+            ClientChannel::Click => 2,
         }
     }
 }
@@ -30,6 +32,12 @@ impl ClientChannel {
             UnreliableChannelConfig {
                 channel_id: Self::Command.into(),
                 sequenced: true,
+                ..Default::default()
+            }
+            .into(),
+            UnreliableChannelConfig {
+                channel_id: Self::Click.into(),
+                sequenced: false,
                 ..Default::default()
             }
             .into(),
