@@ -4,8 +4,8 @@ use bevy_renet::renet::{
 use std::time::Duration;
 
 pub enum ClientChannel {
-    Input,
     Command,
+    Input,
     Click,
 }
 

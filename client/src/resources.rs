@@ -3,7 +3,8 @@ use bevy::utils::HashMap;
 
 #[derive(Resource, Default)]
 pub struct NetworkMapping {
-    pub client_to_server: HashMap<Entity, Entity>,
+    pub client: HashMap<Entity, Entity>,
+    pub server: HashMap<Entity, Entity>,
 }
 
 #[derive(Default)]

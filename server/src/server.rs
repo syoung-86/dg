@@ -6,9 +6,9 @@ use connection::{client_handler, new_renet_server};
 use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{Client, EntityType, Tile},
+    components::{Client, ComponentType, EntityType, LeftClick, Player, PlayerCommand, Tile},
     resources::Tick,
-    ClickEvent, TickSet,
+    ClickEvent, TickSet, UpdateComponentEvent,
 };
 use plugins::{ClearEventPlugin, ConfigPlugin};
 use resources::ServerLobby;
@@ -48,17 +48,105 @@ fn main() {
             .in_set(TickSet::SendChunk)
             .in_schedule(CoreSchedule::FixedUpdate),
     );
-    app.add_system(receive_clicks)
-        .init_schedule(CoreSchedule::FixedUpdate);
+    //app.add_system(receive_clicks)
+    //.init_schedule(CoreSchedule::FixedUpdate);
+
+    app.add_systems(
+        (receive_movement, replicate_players)
+            .chain()
+            .in_schedule(CoreSchedule::FixedUpdate),
+    );
     app.add_systems(
         (RenetServerPlugin::get_clear_event_systems().in_set(TickSet::Clear))
             .in_schedule(CoreSchedule::FixedUpdate),
     );
     app.add_startup_system(create_tiles);
+
     app.add_event::<ClientSetup>();
     app.run();
 }
 
+pub fn replicate_players(
+    mut server: ResMut<RenetServer>,
+    players: Query<(Entity, &Tile), (With<Player>, Changed<Tile>)>,
+    //clients: Query<&ClientInfo>,
+) {
+    for client in server.clients_id().into_iter() {
+        for (e, tile) in players.iter() {
+            let update_component: (Entity, ComponentType) = (e, ComponentType::Tile(*tile));
+            println!("update compoennt: {:?}", update_component);
+            let message = bincode::serialize(&(update_component)).unwrap();
+            server.send_message(client, ServerChannel::Update, message);
+        }
+    }
+}
+pub fn receive_movement(
+    mut server: ResMut<RenetServer>,
+    mut commands: Commands,
+    lobby: ResMut<ServerLobby>,
+    item_query: Query<(Entity, &EntityType)>,
+    //mut players: Query<(Entity, &mut Inventory)>,
+) {
+    for client_id in server.clients_id().into_iter() {
+        while let Some(message) = server.receive_message(client_id, ClientChannel::Command) {
+            let command: PlayerCommand = bincode::deserialize(&message).unwrap();
+            println!("receive  msg {:?}", command);
+            match command {
+                PlayerCommand::BasicClick(tile) => {
+                    println!(
+                        "Received basic click from client {}: tile_key: {:?}",
+                        client_id, tile
+                    );
+                    if let Some(player_entity) = lobby.clients.get(&client_id) {
+                        println!("inserted new tile");
+                    }
+                }
+                PlayerCommand::LeftClick(left_click, tile) => match left_click {
+                    LeftClick::Walk => {
+                        if let Some(client) = lobby.clients.get(&client_id) {
+                            println!("inserted new tile");
+                            commands.entity(client.controlled_entity).insert(tile);
+                            let message: (Entity, Vec<ComponentType>) =
+                                (client.controlled_entity, vec![ComponentType::Tile(tile)]);
+                            let serd_message = bincode::serialize(&message).unwrap();
+                            server.broadcast_message(ServerChannel::Update, serd_message);
+                            //println!("walk");
+                        }
+                    }
+                    LeftClick::Pickup(Some(e)) => {
+                        println!("pickup {:?}", e);
+                        if let Some(player_entity) = lobby.clients.get(&client_id) {
+                            //commands.entity(*player_entity).insert(tile);
+                            //for (player, mut inventory) in players.iter_mut() {
+                            //if *player_entity == player {
+                            //for (item, item_id) in item_query.iter() {
+                            //if e == item {
+                            //let inventory_item = commands.spawn(*item_id).id();
+                            //inventory.slots.insert(inventory_item);
+                            //println!("inserted into inventory");
+                            //let message = bincode::serialize(item_id).unwrap();
+                            //server.send_message(
+                            //client_id,
+                            //ServerChannel::Test,
+                            //message,
+                            //);
+                            //}
+                            //}
+                            //}
+                            //}
+                            commands.entity(e).despawn_recursive();
+                            println!("pickup {:?}", e);
+
+                            let despawn_message = bincode::serialize(&e).unwrap();
+                            server.broadcast_message(ServerChannel::Despawn, despawn_message);
+                        }
+                    }
+                    _ => (),
+                },
+            }
+        }
+    }
+}
 pub fn receive_clicks(mut lobby: Res<ServerLobby>, mut server: ResMut<RenetServer>) {
     for (client_id, _) in lobby.clients.iter() {
         if let Some(message) = server.receive_message(*client_id, ClientChannel::Click) {
@@ -85,6 +173,7 @@ pub fn send_chunk(
 ) {
     for request in requests.drain() {
         for client in clients.iter() {
+            println!("send load message");
             if client.id == request.0 {
                 let scope: Vec<(Entity, EntityType, Tile)> = query
                     .iter()

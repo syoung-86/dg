@@ -24,3 +24,6 @@ pub struct ClickEvent {
     pub left_click: LeftClick,
     pub destination: Tile,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct UpdateComponentEvent<C: Component>(pub Entity, pub C);

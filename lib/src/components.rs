@@ -1,6 +1,12 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Serialize, Deserialize, Component)]
+pub enum PlayerCommand {
+    BasicClick(Tile),
+    LeftClick(LeftClick, Tile),
+    //RunTo(Tile, Path),
+}
 #[derive(Debug)]
 pub enum Direction {
     Bad,
@@ -109,7 +115,7 @@ pub enum LeftClick {
     #[default]
     Walk,
     Attack,
-    Pickup(Entity),
+    Pickup(Option<Entity>),
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -130,10 +136,11 @@ pub enum ServerMessages {
     PlayerDisconnected { id: u64 },
 }
 
-#[derive(Default, Serialize, Deserialize, Component, Debug)]
+#[derive(Clone, Copy, Serialize, Deserialize, Component, Debug)]
 pub struct Client {
     pub id: u64,
     pub scope: Scope,
+    pub controlled_entity: Entity,
 }
 #[derive(Eq, PartialEq, Debug, Serialize, Deserialize, Component, Default, Copy, Clone)]
 pub struct Tile {

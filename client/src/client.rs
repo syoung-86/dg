@@ -14,11 +14,13 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{ControlledEntity, EntityType, LeftClick, Player, Tile, Path},
+    components::{
+        ComponentType, ControlledEntity, EntityType, LeftClick, Path, Player, PlayerCommand, Tile,
+    },
     resources::Tick,
     ClickEvent,
 };
-use movement::get_path;
+use movement::{client_send_player_commands, get_path, scheduled_movement};
 use rand::Rng;
 use resources::{ClientLobby, NetworkMapping};
 use serde::{Deserialize, Serialize};
@@ -26,10 +28,10 @@ use smooth_bevy_cameras::{
     controllers::{orbit::OrbitCameraPlugin, unreal::UnrealCameraPlugin},
     LookTransformPlugin,
 };
-pub mod movement;
 pub mod camera;
 pub mod components;
 pub mod connection;
+pub mod movement;
 pub mod plugins;
 pub mod resources;
 pub mod run_conditions;
@@ -71,11 +73,38 @@ fn main() {
     app.insert_resource(ClientLobby::default());
     app.add_system(despawn);
     app.add_system(get_path);
+    app.add_system(scheduled_movement);
     app.add_system(make_pickable);
     app.add_system(mouse_input);
     app.add_system(receive_tick);
+    app.add_system(update);
+    app.add_system(client_send_player_commands);
     app.add_event::<ClickEvent>();
+    app.add_event::<PlayerCommand>();
     app.run();
+}
+
+pub fn update(
+    network_mapping: Res<NetworkMapping>,
+    mut client: ResMut<RenetClient>,
+    mut player: Query<Entity, With<ControlledEntity>>,
+    mut commands: Commands,
+) {
+    if let Some(message) = client.receive_message(ServerChannel::Update) {
+        let update: (Entity, Vec<ComponentType>) = bincode::deserialize(&message).unwrap();
+        println!("received update {:?}", update);
+        if let Some(client_entity) = network_mapping.server.get(&update.0) {
+            println!("found server -> client entity");
+            for components in update.1 {
+                match components {
+                    ComponentType::Tile(tile) => {
+                        commands.entity(*client_entity).insert((tile,tile.to_transform()));
+                    }
+                    ComponentType::Player(_) => (),
+                }
+            }
+        }
+    }
 }
 
 pub fn receive_tick(mut client: ResMut<RenetClient>, mut tick: ResMut<Tick>) {
@@ -97,7 +126,11 @@ pub fn mouse_input(
                     .iter()
                     .filter(|(entity, _action, _)| entity == clicked_entity)
                     .for_each(|(entity, action, tile)| {
-                        click_event.send(ClickEvent{target: entity, left_click: *action, destination: *tile,})
+                        click_event.send(ClickEvent {
+                            target: entity,
+                            left_click: *action,
+                            destination: *tile,
+                        })
                     });
             }
             _ => (),
@@ -122,8 +155,9 @@ pub fn load(
     if let Some(message) = client.receive_message(ServerChannel::Load) {
         let scope: Vec<(Entity, EntityType, Tile)> = bincode::deserialize(&message).unwrap();
 
+        println!("scope");
         for (e, entity_type, t) in scope {
-            //println!("tile: {:?}", t);
+            println!("tile: {:?}", t);
             match entity_type {
                 EntityType::Tile => {
                     let mut rng = rand::thread_rng();
@@ -145,7 +179,8 @@ pub fn load(
                         ))
                         //.forward_events::<PointerDown, PickingEvent>()
                         .id();
-                    network_mapping.client_to_server.insert(new_player, e);
+                    network_mapping.client.insert(new_player, e);
+                    network_mapping.server.insert(e, new_player);
                 }
                 EntityType::Player(player) => {
                     let transform = t.to_transform();
@@ -183,7 +218,9 @@ pub fn load(
                         ));
                     }
                     commands.entity(new_player).insert(player);
-                    network_mapping.client_to_server.insert(new_player, e);
+                    network_mapping.client.insert(new_player, e);
+                    network_mapping.server.insert(e, new_player);
+                    println!("server e: {:?}, client e: {:?}", e, new_player);
                 }
             }
         }
@@ -213,7 +250,7 @@ pub fn despawn(
             .filter(|(_e, player)| player.id == old_client)
             .for_each(|(e, _player)| {
                 commands.entity(e).despawn();
-                network_mapping.client_to_server.remove_entry(&e);
+                network_mapping.client.remove_entry(&e);
             });
     }
 }

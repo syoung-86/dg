@@ -1,25 +1,29 @@
-use bevy::{prelude::* };
+use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
-use lib::{ClickEvent, components::{Tile, ControlledEntity, Path, LeftClick}, resources::Tick};
+use lib::{
+    components::{ControlledEntity, LeftClick, Path, PlayerCommand, Tile},
+    resources::Tick,
+    ClickEvent, channels::ClientChannel,
+};
+
+use crate::resources::NetworkMapping;
 pub fn get_path(
-    mut client: ResMut<RenetClient>,
     mut commands: Commands,
     mut walk_event: EventReader<ClickEvent>,
-    query: Query<&Tile, With<ControlledEntity>>,
+    query: Query<(Entity, &Tile), With<ControlledEntity>>,
     tick: Res<Tick>,
 ) {
     for event in walk_event.iter() {
-        let origin = query.get_single().unwrap();
+        let (entity, origin) = query.get_single().unwrap();
         let mut_tick = Tick { tick: tick.tick };
-        let mut path = Path {
+        let path = Path {
             destination: event.destination,
             origin: *origin,
             left_click: event.left_click,
         };
         let path_map = create_path(path, mut_tick);
         println!("path_map: {:?}", path_map);
-        //let message = bincode::serialize(&event).unwrap();
-        //client.send_message(ClientChannel::Click, message);
+        commands.entity(entity).insert(path_map);
     }
 }
 
@@ -44,7 +48,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                     },
                 ));
             }
-            LeftClick::Pickup(_) => {
+            LeftClick::Pickup(Some(_)) => {
                 if path.origin.cell.1 == path.destination.cell.1 {
                     path_map.steps.push((
                         step_tick.clone(),
@@ -75,17 +79,16 @@ pub fn scheduled_movement(
     mut commands: Commands,
     mut network_mapping: ResMut<NetworkMapping>,
 ) {
-    //println!("origin: test");
     if let Ok(mut path_map) = query.get_single_mut() {
         path_map.steps.retain(|(scheduled_tick, left_click, tile)| {
             if scheduled_tick.tick <= game_tick.tick {
                 //player_commands.send(PlayerCommand::LeftClick(*left_click, *tile));
                 match left_click {
-                    LeftClick::PickUp(Some(e)) => {
+                    LeftClick::Pickup(Some(e)) => {
                         println!("some e: {:?}", e);
-                        if let Some(server_entity) = network_mapping.0.remove(e) {
+                        if let Some(server_entity) = network_mapping.client.remove(e) {
                             player_commands.send(PlayerCommand::LeftClick(
-                                LeftClick::PickUp(Some(server_entity)),
+                                LeftClick::Pickup(Some(server_entity)),
                                 *tile,
                             ));
                             println!("command send pickup {:?}", e);
@@ -94,6 +97,7 @@ pub fn scheduled_movement(
                         commands.entity(*e).despawn_recursive();
                     }
                     LeftClick::Walk => {
+                        println!("walk");
                         player_commands.send(PlayerCommand::LeftClick(*left_click, *tile));
                     }
                     _ => (),
@@ -105,4 +109,16 @@ pub fn scheduled_movement(
         });
     }
     //}
+}
+
+pub fn client_send_player_commands(
+    mut player_commands: EventReader<PlayerCommand>,
+    mut client: ResMut<RenetClient>,
+) {
+    for command in player_commands.iter() {
+        let command_message = bincode::serialize(command).unwrap();
+        client.send_message(ClientChannel::Command, command_message);
+
+                        println!("send");
+    }
 }
