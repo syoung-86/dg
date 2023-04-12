@@ -10,15 +10,14 @@ name = "client"
 path = "src/client.rs"
 
 [dependencies]
-#bevy = { version = "0.10.0", features = ["dynamic_linking"] }
-bevy = { version = "0.10.0", features = ["default"] }
-bevy_renet = "0.0.7"
+bevy = { version = "0.10.1", features = ["dynamic_linking"] }
+#bevy = { version = "0.10.1", features = ["default"] }
 bincode = "1.3.3"
 serde = "1.0.155"
 lib = { path = "../lib/" }
 smooth-bevy-cameras = "0.8.0"
 rand = "0.8.5"
 bevy-inspector-egui = "0.18.1"
-leafwing-input-manager = "0.9.0"
-bevy_mod_picking = {git = "https://github.com/Fincap/bevy_mod_picking", branch = "migrate-bevy-0.10.0"}
-bevy_replicon = "0.2.2"
+leafwing-input-manager = "0.9.1"
+bevy_mod_picking = "0.12.0"
+bevy_replicon = "0.2.3"

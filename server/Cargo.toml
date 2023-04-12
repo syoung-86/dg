@@ -13,10 +13,10 @@ name = "server"
 path = "src/server.rs"
 
 [dependencies]
-bevy = { version = "0.10.0"}
-bevy_renet = "0.0.7"
+bevy = { version = "0.10.1", features = ["dynamic_linking"] }
 bincode = "1.3.3"
 serde = "1.0.155"
 lib = { path = "../lib" }
 bevycheck = "0.5.2"
 rand = "0.8.5"
+bevy_replicon = "0.2.3"
