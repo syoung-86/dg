@@ -21,4 +21,3 @@ rand = "0.8.5"
 bevy-inspector-egui = "0.18.1"
 leafwing-input-manager = "0.9.0"
 bevy_mod_picking = {git = "https://github.com/Fincap/bevy_mod_picking", branch = "migrate-bevy-0.10.0"}
-bevy_replicon = "0.2.2"

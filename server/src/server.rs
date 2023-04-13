@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_renet::{renet::RenetServer, RenetServerPlugin};
-use connection::{client_handler, new_renet_server};
+use connection::{client_handler, new_renet_server, spawn_player};
 use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::{ClientChannel, ServerChannel},
@@ -73,7 +73,8 @@ pub fn replicate_players(
 ) {
     for client in server.clients_id().into_iter() {
         for (e, tile) in players.iter() {
-            let update_component: (Entity, ComponentType) = (e, ComponentType::Tile(*tile));
+            let update_component: (Entity, Vec<ComponentType>) =
+                (e, vec![ComponentType::Tile(*tile)]);
             println!("update compoennt: {:?}", update_component);
             let message = bincode::serialize(&(update_component)).unwrap();
             server.send_message(client, ServerChannel::Update, message);

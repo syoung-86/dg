@@ -1,9 +1,10 @@
 use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use lib::{
+    channels::ClientChannel,
     components::{ControlledEntity, LeftClick, Path, PlayerCommand, Tile},
     resources::Tick,
-    ClickEvent, channels::ClientChannel,
+    ClickEvent,
 };
 
 use crate::resources::NetworkMapping;
@@ -14,16 +15,17 @@ pub fn get_path(
     tick: Res<Tick>,
 ) {
     for event in walk_event.iter() {
-        let (entity, origin) = query.get_single().unwrap();
-        let mut_tick = Tick { tick: tick.tick };
-        let path = Path {
-            destination: event.destination,
-            origin: *origin,
-            left_click: event.left_click,
-        };
-        let path_map = create_path(path, mut_tick);
-        println!("path_map: {:?}", path_map);
-        commands.entity(entity).insert(path_map);
+        if let Ok((entity, origin)) = query.get_single() {
+            let mut_tick = Tick { tick: tick.tick };
+            let path = Path {
+                destination: event.destination,
+                origin: *origin,
+                left_click: event.left_click,
+            };
+            let path_map = create_path(path, mut_tick);
+            println!("path_map: {:?}", path_map);
+            commands.entity(entity).insert(path_map);
+        }
     }
 }
 
@@ -119,6 +121,6 @@ pub fn client_send_player_commands(
         let command_message = bincode::serialize(command).unwrap();
         client.send_message(ClientChannel::Command, command_message);
 
-                        println!("send");
+        println!("send");
     }
 }

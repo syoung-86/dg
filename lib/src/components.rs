@@ -1,4 +1,7 @@
-use bevy::prelude::*;
+use bevy::{
+    ecs::entity::{EntityMap, MapEntities, MapEntitiesError},
+    prelude::*,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Component)]

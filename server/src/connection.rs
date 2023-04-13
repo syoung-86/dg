@@ -3,7 +3,7 @@ use bevy_renet::{
     renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
     RenetServerPlugin,
 };
-use lib::components::{Client, EntityType};
+use lib::components::{Client, ComponentType, EntityType, ServerMessages};
 use lib::PROTOCOL_ID;
 use lib::{
     channels::{ClientChannel, ServerChannel},
@@ -61,6 +61,9 @@ pub fn client_handler(
                 commands.spawn(new_client);
                 request_event.send(ChunkRequest(id));
                 server_lobby.clients.insert(id, new_client);
+                let message = ServerMessages::PlayerConnected { id };
+                let message = bincode::serialize(&message).unwrap();
+                server.broadcast_message(ServerChannel::ServerMessages, message);
             }
 
             ServerEvent::ClientDisconnected(id) => {
@@ -74,5 +77,17 @@ pub fn client_handler(
                 }
             }
         }
+    }
+}
+
+pub fn spawn_player(
+    mut server: ResMut<RenetServer>,
+    new_player: Query<(Entity, &EntityType, &Tile), Added<EntityType>>,
+) {
+    for (entity, player, tile) in &new_player {
+        let message: (Entity, EntityType, Tile) = (entity, *player, *tile);
+        let message = bincode::serialize(&message).unwrap();
+        server.broadcast_message(ServerChannel::Spawn, message);
+        println!("sent spawn message for new player");
     }
 }
