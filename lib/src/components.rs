@@ -121,7 +121,7 @@ pub enum LeftClick {
     Pickup(Option<Entity>),
 }
 
-#[derive(Debug, Serialize, Deserialize, Component)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Component)]
 pub enum ComponentType {
     Tile(Tile),
     Player(Player),

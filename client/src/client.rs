@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use bevy::{
     ecs::{
-        entity::{EntityMap, MapEntities},
+        entity::MapEntities,
         schedule::{LogLevel, ScheduleBuildSettings},
     },
     input::mouse,
@@ -82,6 +82,9 @@ fn main() {
     app.add_system(make_pickable);
     app.add_system(mouse_input);
     app.add_system(receive_tick);
+    app.add_system(receive_message);
+    app.add_system(spawn);
+    app.add_system(update);
     app.add_system(client_send_player_commands);
     app.add_event::<ClickEvent>();
     app.add_event::<PlayerCommand>();
@@ -92,46 +95,68 @@ fn main() {
     app.run();
 }
 
-pub struct SpawnEvent(Entity, EntityType, Vec<ComponentType>);
+pub struct SpawnEvent {
+    entity: Entity,
+    entity_type: EntityType,
+    tile: Tile,
+}
 pub struct DespawnEvent(Entity);
-pub struct UpdateEvent(Entity, Vec<ComponentType>);
+pub struct UpdateEvent {
+    entity: Entity,
+    component: ComponentType,
+}
 pub struct TickEvent(Tick);
 pub fn receive_message(
     mut client: ResMut<RenetClient>,
     mut spawn_event: EventWriter<SpawnEvent>,
-    mut despawn_event: EventWriter<DespawnEvent>,
+    //mut despawn_event: EventWriter<DespawnEvent>,
     mut update_event: EventWriter<UpdateEvent>,
-    mut tick_event: EventWriter<TickEvent>,
+    //mut tick_event: EventWriter<TickEvent>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut commands: Commands,
 ) {
     if let Some(message) = client.receive_message(ServerChannel::Load) {
-        let load_message: Vec<(Entity, EntityType, Vec<ComponentType>)> =
-            bincode::deserialize(&message).unwrap();
-        for (server_entity, entity_type, component_type) in load_message {
-            let entity = commands.spawn_empty().id();
-            network_mapping.client.insert(entity, server_entity);
-            network_mapping.server.insert(server_entity, entity);
-            spawn_event.send(SpawnEvent(entity, entity_type, component_type));
+        println!("received load message");
+        let load_message: Vec<(Entity, EntityType, Tile)> = bincode::deserialize(&message).unwrap();
+        for (server_entity, entity_type, tile) in load_message {
+            if let None = network_mapping.server.get(&server_entity) {
+                let entity = commands.spawn_empty().id();
+                network_mapping.client.insert(entity, server_entity);
+                network_mapping.server.insert(server_entity, entity);
+                spawn_event.send(SpawnEvent {
+                    entity,
+                    entity_type,
+                    tile,
+                });
+            }
         }
     }
 
     if let Some(message) = client.receive_message(ServerChannel::Spawn) {
-        let (server_entity, entity_type, component_type): (Entity, EntityType, Vec<ComponentType>) =
+        let (server_entity, entity_type, tile): (Entity, EntityType, Tile) =
             bincode::deserialize(&message).unwrap();
-        let entity = commands.spawn_empty().id();
-        network_mapping.client.insert(entity, server_entity);
-        network_mapping.server.insert(server_entity, entity);
-        spawn_event.send(SpawnEvent(entity, entity_type, component_type));
+        if let None = network_mapping.server.get(&server_entity) {
+            let entity = commands.spawn_empty().id();
+            network_mapping.client.insert(entity, server_entity);
+            network_mapping.server.insert(server_entity, entity);
+            spawn_event.send(SpawnEvent {
+                entity,
+                entity_type,
+                tile,
+            });
+        }
     }
 
     if let Some(message) = client.receive_message(ServerChannel::Update) {
-        let (server_entity, component_type): (Entity, Vec<ComponentType>) =
+        println!("Received Update Message!");
+        let (server_entity, component): (Entity, ComponentType) =
             bincode::deserialize(&message).unwrap();
-        let entity = commands.spawn_empty().id();
-        network_mapping.client.insert(entity, server_entity);
-        network_mapping.server.insert(server_entity, entity);
-        update_event.send(UpdateEvent(entity, component_type));
+        if let Some(entity) = network_mapping.server.get(&server_entity) {
+            update_event.send(UpdateEvent {
+                entity: *entity,
+                component,
+            });
+        }
     }
 
     if let Some(message) = client.receive_message(ServerChannel::Despawn) {
@@ -141,13 +166,95 @@ pub fn receive_message(
         }
     }
 
-    if let Some(message) = client.receive_message(ServerChannel::Tick) {
-        let new_tick: Tick = bincode::deserialize(&message).unwrap();
-        tick_event.send(TickEvent(new_tick));
-        //tick.tick = new_tick.tick;
-    }
+    //if let Some(message) = client.receive_message(ServerChannel::Tick) {
+    //let new_tick: Tick = bincode::deserialize(&message).unwrap();
+    //tick_event.send(TickEvent(new_tick));
+    //tick.tick = new_tick.tick;
+    //}
 }
 
+pub fn update(
+    mut commands: Commands,
+    mut update_event: EventReader<UpdateEvent>,
+    mut client: ResMut<RenetClient>,
+) {
+    for event in update_event.iter() {
+        println!("Received Update Event");
+        match event.component {
+            ComponentType::Tile(t) => commands.entity(event.entity).insert((t, t.to_transform())),
+            ComponentType::Player(c) => commands.entity(event.entity).insert(c),
+        };
+    }
+}
+pub fn spawn(
+    mut commands: Commands,
+    mut spawn_event: EventReader<SpawnEvent>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut client: ResMut<RenetClient>,
+) {
+    for event in spawn_event.iter() {
+        //println!(
+        //"spawn e: {:?}, type: {:?}, components: {:?}",
+        //event.entity, event.entity_type, event.tile
+        //);
+        match event.entity_type {
+            EntityType::Tile => {
+                let transform = event.tile.to_transform();
+                commands.entity(event.entity).insert((
+                    PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::Box::new(1., 0.2, 1.))),
+                        material: materials.add(Color::rgb(0.2, 0.5, 0.2).into()),
+                        transform,
+                        ..Default::default()
+                    },
+                    //PickableBundle::default(),
+                    //PickRaycastTarget::default(),
+                    //NoDeselect,
+                    event.tile,
+                    LeftClick::Walk,
+                ));
+                //.forward_events::<PointerDown, PickingEvent>()
+            }
+            EntityType::Player(player) => {
+                let transform = event.tile.to_transform();
+                commands.entity(event.entity).insert((
+                    PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::Capsule {
+                            rings: 10,
+                            ..default()
+                        })),
+                        material: materials.add(Color::rgb(0.8, 0.8, 0.8).into()),
+                        transform,
+                        ..Default::default()
+                    },
+                    //PickableBundle::default(),
+                    //PickRaycastTarget::default(),
+                    //NoDeselect,
+                    event.tile,
+                    //LeftClick::default(),
+                ));
+                //.forward_events::<PointerDown, PickingEvent>()
+                //
+
+                println!("spawn player: {:?}", player);
+                if player.id == client.client_id() {
+                    commands.entity(event.entity).insert(ControlledEntity);
+                }
+
+                commands.spawn(PointLightBundle {
+                    point_light: PointLight {
+                        intensity: 1500.0,
+                        shadows_enabled: true,
+                        ..Default::default()
+                    },
+                    transform: Transform::from_xyz(4.0, 8.0, 4.0),
+                    ..Default::default()
+                });
+            }
+        }
+    }
+}
 pub fn receive_tick(mut client: ResMut<RenetClient>, mut tick: ResMut<Tick>) {
     if let Some(message) = client.receive_message(ServerChannel::Tick) {
         let new_tick: Tick = bincode::deserialize(&message).unwrap();

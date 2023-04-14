@@ -107,8 +107,8 @@ pub fn receive_movement(
                         if let Some(client) = lobby.clients.get(&client_id) {
                             println!("inserted new tile");
                             commands.entity(client.controlled_entity).insert(tile);
-                            let message: (Entity, Vec<ComponentType>) =
-                                (client.controlled_entity, vec![ComponentType::Tile(tile)]);
+                            let message: (Entity, ComponentType) =
+                                (client.controlled_entity, ComponentType::Tile(tile));
                             let serd_message = bincode::serialize(&message).unwrap();
                             server.broadcast_message(ServerChannel::Update, serd_message);
                             //println!("walk");
@@ -148,7 +148,7 @@ pub fn receive_movement(
         }
     }
 }
-pub fn receive_clicks(mut lobby: Res<ServerLobby>, mut server: ResMut<RenetServer>) {
+pub fn receive_clicks(lobby: Res<ServerLobby>, mut server: ResMut<RenetServer>) {
     for (client_id, _) in lobby.clients.iter() {
         if let Some(message) = server.receive_message(*client_id, ClientChannel::Click) {
             let click: ClickEvent = bincode::deserialize(&message).unwrap();

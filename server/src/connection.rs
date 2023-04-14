@@ -64,6 +64,13 @@ pub fn client_handler(
                 let message = ServerMessages::PlayerConnected { id };
                 let message = bincode::serialize(&message).unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
+                let message: (Entity, EntityType, Tile) = (
+                    player,
+                    EntityType::Player(Player { id }),
+                    Tile { cell: (x, 0, 4) },
+                );
+                let message = bincode::serialize(&message).unwrap();
+                server.broadcast_message(ServerChannel::Spawn, message);
             }
 
             ServerEvent::ClientDisconnected(id) => {
