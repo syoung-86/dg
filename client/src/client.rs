@@ -26,6 +26,7 @@ use lib::{
 };
 use movement::{client_send_player_commands, get_path, scheduled_movement};
 use rand::Rng;
+use receive::{despawn_message, load_message, spawn_message, update_message};
 use resources::{ClientLobby, NetworkMapping};
 use serde::{Deserialize, Serialize};
 use smooth_bevy_cameras::{
@@ -39,6 +40,7 @@ pub mod components;
 pub mod connection;
 pub mod movement;
 pub mod plugins;
+pub mod receive;
 pub mod resources;
 pub mod run_conditions;
 
@@ -83,7 +85,10 @@ fn main() {
     app.add_system(make_pickable);
     app.add_system(mouse_input);
     app.add_system(receive_tick);
-    app.add_system(receive_message);
+    app.add_system(load_message);
+    app.add_system(spawn_message);
+    app.add_system(update_message);
+    app.add_system(despawn_message);
     app.add_system(spawn);
     app.add_system(update);
     app.add_system(client_send_player_commands);
@@ -108,78 +113,6 @@ pub struct UpdateEvent {
     component: ComponentType,
 }
 pub struct TickEvent(Tick);
-pub fn receive_message(
-    mut client: ResMut<RenetClient>,
-    mut spawn_event: EventWriter<SpawnEvent>,
-    //mut despawn_event: EventWriter<DespawnEvent>,
-    mut update_event: EventWriter<UpdateEvent>,
-    //mut tick_event: EventWriter<TickEvent>,
-    mut network_mapping: ResMut<NetworkMapping>,
-    mut commands: Commands,
-) {
-    if let Some(message) = client.receive_message(ServerChannel::Load) {
-        println!("received load message");
-        let load_message: Vec<(Entity, EntityType, Tile)> = bincode::deserialize(&message).unwrap();
-        for (server_entity, entity_type, tile) in load_message {
-            if let None = network_mapping.server.get(&server_entity) {
-                let entity = commands.spawn_empty().id();
-                network_mapping.client.insert(entity, server_entity);
-                network_mapping.server.insert(server_entity, entity);
-                spawn_event.send(SpawnEvent {
-                    entity,
-                    entity_type,
-                    tile,
-                });
-            }
-        }
-    }
-
-    if let Some(message) = client.receive_message(ServerChannel::Spawn) {
-        let (server_entity, entity_type, tile): (Entity, EntityType, Tile) =
-            bincode::deserialize(&message).unwrap();
-        if let None = network_mapping.server.get(&server_entity) {
-            let entity = commands.spawn_empty().id();
-            network_mapping.client.insert(entity, server_entity);
-            network_mapping.server.insert(server_entity, entity);
-            let event = SpawnEvent {
-                entity,
-                entity_type,
-                tile,
-            };
-
-            spawn_event.send(SpawnEvent {
-                entity,
-                entity_type,
-                tile,
-            });
-        }
-    }
-
-    if let Some(message) = client.receive_message(ServerChannel::Update) {
-        println!("Received Update Message!");
-        let (server_entity, component): (Entity, ComponentType) =
-            bincode::deserialize(&message).unwrap();
-        if let Some(entity) = network_mapping.server.get(&server_entity) {
-            update_event.send(UpdateEvent {
-                entity: *entity,
-                component,
-            });
-        }
-    }
-
-    if let Some(message) = client.receive_message(ServerChannel::Despawn) {
-        let despawn_entity: Entity = bincode::deserialize(&message).unwrap();
-        if let Some(entity) = network_mapping.server.remove(&despawn_entity) {
-            commands.entity(entity).despawn_recursive();
-        }
-    }
-
-    //if let Some(message) = client.receive_message(ServerChannel::Tick) {
-    //let new_tick: Tick = bincode::deserialize(&message).unwrap();
-    //tick_event.send(TickEvent(new_tick));
-    //tick.tick = new_tick.tick;
-    //}
-}
 
 pub fn update(
     mut commands: Commands,

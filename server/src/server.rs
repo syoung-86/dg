@@ -81,6 +81,11 @@ pub fn replicate_players(
         }
     }
 }
+
+pub fn receive_message(
+    mut server: ResMut<RenetServer>,
+){
+}
 pub fn receive_movement(
     mut server: ResMut<RenetServer>,
     mut commands: Commands,
