@@ -1,15 +1,18 @@
 use std::time::Duration;
 
+use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims};
 use bevy::{
     ecs::{
         entity::MapEntities,
         schedule::{LogLevel, ScheduleBuildSettings},
         system::SystemParam,
     },
+    gltf::Gltf,
     input::mouse,
     prelude::*,
 };
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickableMesh, PickingEvent};
+use seldom_state::prelude::*;
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_renet::{renet::RenetClient, RenetClientPlugin};
@@ -35,6 +38,7 @@ use smooth_bevy_cameras::{
 };
 
 use crate::resources::ClientInfo;
+pub mod assets;
 pub mod camera;
 pub mod components;
 pub mod connection;
@@ -79,6 +83,9 @@ fn main() {
     app.insert_resource(new_renet_client());
     app.insert_resource(NetworkMapping::default());
     app.insert_resource(ClientLobby::default());
+    app.insert_resource(Animations::default());
+    app.insert_resource(ShouldLoadAnims(true));
+    app.init_resource::<ManAssetPack>();
     //app.add_system(despawn);
     app.add_system(get_path);
     app.add_system(scheduled_movement);
@@ -91,7 +98,9 @@ fn main() {
     app.add_system(despawn_message);
     app.add_system(spawn);
     app.add_system(update);
+    app.add_system(setup_anims);
     app.add_system(client_send_player_commands);
+    app.add_system(load_anims.run_if(should_load_anims));
     app.add_event::<ClickEvent>();
     app.add_event::<PlayerCommand>();
     app.add_event::<SpawnEvent>();
@@ -101,6 +110,87 @@ fn main() {
     app.run();
 }
 
+pub fn setup_anims(
+    animations: Res<Animations>,
+    mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
+    player_parent: Query<(Entity, &Parent, &Children)>,
+    state: Query<(Entity, Option<&Running>), Changed<Transform>>,
+    //mut commands: Commands,
+) {
+    for (parent, mut player) in animation_players.iter_mut() {
+        let player_parent_get = parent.get();
+        for (player_parent_entity, parent_player_parent, _) in player_parent.iter() {
+            if player_parent_get == player_parent_entity {
+                let entity_animate = parent_player_parent.get();
+                for (e, running) in state.iter() {
+                    if entity_animate == e {
+                        if let Some(_) = running {
+                            player.play(animations.0[9].clone_weak()).repeat();
+                        } else {
+                            player.play(animations.0[3].clone_weak()).repeat();
+                        }
+                    }
+                }
+                //commands.entity(parent_player_parent.get()).log_components();
+            }
+        }
+    }
+}
+#[derive(Clone, Component, Reflect)]
+#[component(storage = "SparseSet")]
+pub struct Idle;
+
+#[derive(Clone, Component, Reflect)]
+#[component(storage = "SparseSet")]
+pub struct Running;
+
+#[derive(Clone, Copy, FromReflect, Reflect)]
+pub struct Moving;
+
+impl Trigger for Moving {
+    // Put the parameters that your trigger needs here
+    // For concision, you may use `bevy_ecs::system::system_param::lifetimeless` variants of system
+    // params, like so:
+    // type Param<'w, 's> = (SQuery<&'static Transform>, SRes<Time>);
+    // Triggers are immutable; you may not access system params mutably
+    // Do not query for the `StateMachine` component in this type. This, unfortunately, will panic.
+    // `Time` is included here to demonstrate how to get multiple system params
+    type Ok = f32;
+    type Err = f32;
+    type Param<'w, 's> = Query<'w, 's, &'static Player, Changed<Transform>>;
+
+    // This function checks if the given entity should trigger
+    // It runs once per frame for each entity that is in a state that can transition
+    // on this trigger
+    // Return `true` to trigger and `false` to not trigger
+    fn trigger(&self, _entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
+        if let Some(_) = player.iter().next() {
+            Ok(0.)
+        } else {
+            Err(1.)
+        }
+    }
+}
+#[derive(Bundle)]
+pub struct PlayerBundle {
+    tile: Tile,
+    state: StateMachine,
+}
+
+impl PlayerBundle {
+    pub fn new(tile: &Tile) -> Self {
+        PlayerBundle {
+            tile: *tile,
+            state: StateMachine::new(Idle)
+                .trans::<Idle>(Moving, Running)
+                .insert_on_enter::<Running>(Running)
+                .remove_on_exit::<Running, Running>()
+                .trans::<Running>(NotTrigger(Moving), Idle)
+                .insert_on_enter::<Idle>(Idle)
+                .remove_on_exit::<Idle, Idle>(),
+        }
+    }
+}
 pub struct SpawnEvent {
     entity: Entity,
     entity_type: EntityType,
@@ -127,12 +217,19 @@ pub fn update(
         };
     }
 }
+
+use bevy::animation::AnimationPlayer;
+#[derive(Resource, Default)]
+pub struct Animations(pub Vec<Handle<AnimationClip>>);
+
 pub fn spawn(
     mut commands: Commands,
     mut spawn_event: EventReader<SpawnEvent>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
     client: Res<RenetClient>,
+    mut man_scene: ResMut<ManAssetPack>,
+    assets: Res<Assets<Gltf>>,
 ) {
     for event in spawn_event.iter() {
         //println!(
@@ -152,29 +249,39 @@ pub fn spawn(
                     //PickableBundle::default(),
                     //PickRaycastTarget::default(),
                     //NoDeselect,
-                    event.tile,
+                    PlayerBundle::new(&event.tile),
                     LeftClick::Walk,
                 ));
                 //.forward_events::<PointerDown, PickingEvent>()
             }
             EntityType::Player(player) => {
                 let transform = event.tile.to_transform();
-                commands.entity(event.entity).insert((
-                    PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Capsule {
-                            rings: 10,
-                            ..default()
-                        })),
-                        material: materials.add(Color::rgb(0.8, 0.8, 0.8).into()),
-                        transform,
-                        ..Default::default()
-                    },
-                    //PickableBundle::default(),
-                    //PickRaycastTarget::default(),
-                    //NoDeselect,
-                    event.tile,
-                    //LeftClick::default(),
-                ));
+                if let Some(gltf) = assets.get(&man_scene.0) {
+                    commands.entity(event.entity).insert((
+                        SceneBundle {
+                            scene: gltf.scenes[0].clone(),
+                            ..Default::default()
+                        },
+                        event.tile,
+                    ));
+                } else {
+                    commands.entity(event.entity).insert((
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Capsule {
+                                rings: 10,
+                                ..default()
+                            })),
+                            material: materials.add(Color::rgb(0.8, 0.8, 0.8).into()),
+                            transform,
+                            ..Default::default()
+                        },
+                        //PickableBundle::default(),
+                        //PickRaycastTarget::default(),
+                        //NoDeselect,
+                        event.tile,
+                        //LeftClick::default(),
+                    ));
+                }
                 //.forward_events::<PointerDown, PickingEvent>()
                 //
 
