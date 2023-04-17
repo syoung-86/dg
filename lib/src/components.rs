@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum PlayerCommand {
-    BasicClick(Tile),
     LeftClick(LeftClick, Tile),
     //RunTo(Tile, Path),
 }

@@ -26,7 +26,7 @@ use lib::{
 };
 use movement::{client_send_player_commands, get_path, scheduled_movement};
 use rand::Rng;
-use receive::{despawn_message, load_message, spawn_message, update_message};
+use receive::{despawn_message, load_message, spawn_message, tick, update_message};
 use resources::{ClientLobby, NetworkMapping};
 use serde::{Deserialize, Serialize};
 use smooth_bevy_cameras::{
@@ -84,7 +84,7 @@ fn main() {
     app.add_system(scheduled_movement);
     app.add_system(make_pickable);
     app.add_system(mouse_input);
-    app.add_system(receive_tick);
+    app.add_system(tick);
     app.add_system(load_message);
     app.add_system(spawn_message);
     app.add_system(update_message);
@@ -194,12 +194,6 @@ pub fn spawn(
                 });
             }
         }
-    }
-}
-pub fn receive_tick(mut client: ResMut<RenetClient>, mut tick: ResMut<Tick>) {
-    if let Some(message) = client.receive_message(ServerChannel::Tick) {
-        let new_tick: Tick = bincode::deserialize(&message).unwrap();
-        tick.tick = new_tick.tick;
     }
 }
 

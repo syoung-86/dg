@@ -3,6 +3,7 @@ use bevy_renet::renet::RenetClient;
 use lib::{
     channels::ServerChannel,
     components::{ComponentType, EntityType, Tile},
+    resources::Tick,
 };
 
 use crate::{resources::NetworkMapping, SpawnEvent, UpdateEvent};
@@ -77,5 +78,12 @@ pub fn despawn_message(
         if let Some(entity) = network_mapping.server.remove(&despawn_entity) {
             commands.entity(entity).despawn_recursive();
         }
+    }
+}
+
+pub fn tick(mut client: ResMut<RenetClient>, mut tick: ResMut<Tick>) {
+    if let Some(message) = client.receive_message(ServerChannel::Tick) {
+        let new_tick: Tick = bincode::deserialize(&message).unwrap();
+        tick.tick = new_tick.tick;
     }
 }
