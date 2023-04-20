@@ -72,6 +72,8 @@ fn main() {
             ..default()
         });
     });
+    app.add_plugin(StateMachinePlugin);
+    app.add_plugin(TriggerPlugin::<Moving>::default());
     app.add_plugin(WorldInspectorPlugin::default());
     app.add_plugin(LookTransformPlugin);
     //app.add_plugin(UnrealCameraPlugin::default());
@@ -165,8 +167,10 @@ impl Trigger for Moving {
     // Return `true` to trigger and `false` to not trigger
     fn trigger(&self, _entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
         if let Some(_) = player.iter().next() {
+            println!("ok running");
             Ok(0.)
         } else {
+            println!(" err idle");
             Err(1.)
         }
     }
@@ -246,10 +250,10 @@ pub fn spawn(
                         transform,
                         ..Default::default()
                     },
+                    event.tile,
                     //PickableBundle::default(),
                     //PickRaycastTarget::default(),
                     //NoDeselect,
-                    PlayerBundle::new(&event.tile),
                     LeftClick::Walk,
                 ));
                 //.forward_events::<PointerDown, PickingEvent>()
@@ -262,7 +266,8 @@ pub fn spawn(
                             scene: gltf.scenes[0].clone(),
                             ..Default::default()
                         },
-                        event.tile,
+                        PlayerBundle::new(&event.tile),
+                        player,
                     ));
                 } else {
                     commands.entity(event.entity).insert((
@@ -278,7 +283,7 @@ pub fn spawn(
                         //PickableBundle::default(),
                         //PickRaycastTarget::default(),
                         //NoDeselect,
-                        event.tile,
+                        PlayerBundle::new(&event.tile),
                         //LeftClick::default(),
                     ));
                 }
