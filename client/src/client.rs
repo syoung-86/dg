@@ -27,7 +27,7 @@ use lib::{
     resources::Tick,
     ClickEvent,
 };
-use movement::{client_send_player_commands, get_path, scheduled_movement};
+use movement::{client_send_player_commands, get_path, scheduled_movement, PathMap};
 use rand::Rng;
 use receive::{despawn_message, load_message, spawn_message, tick, update_message};
 use resources::{ClientLobby, NetworkMapping};
@@ -159,16 +159,22 @@ impl Trigger for Moving {
     // `Time` is included here to demonstrate how to get multiple system params
     type Ok = f32;
     type Err = f32;
-    type Param<'w, 's> = Query<'w, 's, &'static Player, Changed<Transform>>;
+    type Param<'w, 's> = Query<'w, 's, &'static PathMap>;
 
     // This function checks if the given entity should trigger
     // It runs once per frame for each entity that is in a state that can transition
     // on this trigger
     // Return `true` to trigger and `false` to not trigger
     fn trigger(&self, _entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
-        if let Some(_) = player.iter().next() {
-            println!("ok running");
-            Ok(0.)
+        if let Some(path_map) = player.iter().next() {
+            //couple state to tick
+            if path_map.steps.len() > 0 {
+                println!("ok running");
+                Ok(0.)
+            } else {
+                println!(" err idle");
+                Err(1.)
+            }
         } else {
             println!(" err idle");
             Err(1.)
