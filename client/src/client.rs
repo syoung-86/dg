@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims};
 use bevy::{
     ecs::{
@@ -11,8 +9,14 @@ use bevy::{
     input::mouse,
     prelude::*,
 };
+use bevy_easings::*;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickableMesh, PickingEvent};
 use seldom_state::prelude::*;
+use std::{
+    f32::consts::FRAC_1_PI,
+    f32::consts::{FRAC_2_PI, FRAC_PI_2, FRAC_PI_3, PI},
+    time::Duration,
+};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_renet::{renet::RenetClient, RenetClientPlugin};
@@ -63,6 +67,7 @@ fn main() {
     });
 
     app.add_plugin(InputManagerPlugin::<Move>::default());
+    app.add_plugin(EasingsPlugin);
     app.add_plugins(DefaultPickingPlugins);
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
     app.insert_resource(Tick::default());
@@ -109,6 +114,7 @@ fn main() {
     app.add_event::<DespawnEvent>();
     app.add_event::<UpdateEvent>();
     app.add_event::<TickEvent>();
+    app.register_type::<Tile>();
     app.run();
 }
 
@@ -159,26 +165,23 @@ impl Trigger for Moving {
     // `Time` is included here to demonstrate how to get multiple system params
     type Ok = f32;
     type Err = f32;
-    type Param<'w, 's> = Query<'w, 's, &'static PathMap>;
+    type Param<'w, 's> = (Query<'w, 's, &'static PathMap>, Res<'w, Tick>);
 
     // This function checks if the given entity should trigger
     // It runs once per frame for each entity that is in a state that can transition
     // on this trigger
     // Return `true` to trigger and `false` to not trigger
-    fn trigger(&self, _entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
-        if let Some(path_map) = player.iter().next() {
+    fn trigger(&self, _entity: Entity, (player, tick): &Self::Param<'_, '_>) -> Result<f32, f32> {
+        let mut state: Result<f32, f32> = Err(1.0);
+        if let Ok(path_map) = player.get_single() {
             //couple state to tick
-            if path_map.steps.len() > 0 {
-                println!("ok running");
-                Ok(0.)
-            } else {
-                println!(" err idle");
-                Err(1.)
+            if let Some(last) = path_map.steps.last() {
+                if last.0.tick > tick.tick {
+                    state = Ok(0.0);
+                }
             }
-        } else {
-            println!(" err idle");
-            Err(1.)
         }
+        state
     }
 }
 #[derive(Bundle)]
@@ -218,12 +221,73 @@ pub fn update(
     mut commands: Commands,
     mut update_event: EventReader<UpdateEvent>,
     //mut client: ResMut<RenetClient>,
+    query: Query<(Entity, &Transform, &Tile)>,
 ) {
     for event in update_event.iter() {
         println!("Received Update Event");
         match event.component {
-            ComponentType::Tile(t) => commands.entity(event.entity).insert((t, t.to_transform())),
-            ComponentType::Player(c) => commands.entity(event.entity).insert(c),
+            ComponentType::Tile(t) => {
+                for (e, old_transform, old_tile) in query.iter() {
+                    if e == event.entity {
+                        let mut transform = t.to_transform();
+                        //let old_transform = old_tile.to_transform();
+                        let mut rotation = 0.;
+                        if old_tile.cell.0 > t.cell.0 {
+                            rotation = -FRAC_PI_2;
+                            println!("WEST");
+                        } else if old_tile.cell.0 < t.cell.0 {
+                            //rotation = 1.5;
+
+                            rotation = FRAC_PI_2;
+                            println!("EAST");
+                        }
+                        if old_tile.cell.2 > t.cell.2 {
+                            rotation = -PI;
+                            println!("NORTH");
+                        } else if old_tile.cell.2 < t.cell.2 {
+                            rotation = 0.0;
+                            println!("SOUTH");
+                        }
+
+                        println!("old_tile: {:?}, new: {:?}", old_tile, t);
+
+                        if old_tile.cell.0 < t.cell.0 && old_tile.cell.2 > t.cell.2 {
+                            println!("NORTH EAST");
+                            rotation = 2.2;
+                        }
+
+                        if old_tile.cell.0 > t.cell.0 && old_tile.cell.2 > t.cell.2 {
+                            rotation = -2.2;
+
+                            println!("NORTH WEST");
+                        }
+
+                        if old_tile.cell.0 < t.cell.0 && old_tile.cell.2 < t.cell.2 {
+                            rotation = FRAC_PI_3;
+                            println!("SOUTH EAST");
+                        }
+                        if old_tile.cell.0 > t.cell.0 && old_tile.cell.2 < t.cell.2 {
+                            println!("SOUTH WEST");
+                            rotation = -FRAC_PI_3;
+                        }
+                        transform.rotate_y(rotation);
+                        commands.entity(event.entity).insert(old_transform.ease_to(
+                            transform,
+                            bevy_easings::EaseFunction::QuadraticOut,
+                            bevy_easings::EasingType::Once {
+                                duration: std::time::Duration::from_millis(150),
+                            },
+                        ));
+                        commands.entity(event.entity).insert(t);
+                    }
+                    // else {
+                    //commands.entity(event.entity).insert((t, t.to_transform()));
+                    //}
+                }
+            }
+            ComponentType::Player(c) => {
+                commands.entity(event.entity).insert(c);
+            }
         };
     }
 }

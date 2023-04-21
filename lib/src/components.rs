@@ -144,7 +144,10 @@ pub struct Client {
     pub scope: Scope,
     pub controlled_entity: Entity,
 }
-#[derive(Eq, PartialEq, Debug, Serialize, Deserialize, Component, Default, Copy, Clone)]
+#[derive(
+    Reflect, Eq, PartialEq, Debug, Serialize, Deserialize, Component, Default, Copy, Clone,
+)]
+#[reflect(Component)]
 pub struct Tile {
     pub cell: (u32, u32, u32),
 }
