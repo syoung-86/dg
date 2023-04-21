@@ -165,23 +165,18 @@ impl Trigger for Moving {
     // `Time` is included here to demonstrate how to get multiple system params
     type Ok = f32;
     type Err = f32;
-    type Param<'w, 's> = (Query<'w, 's, &'static PathMap>, Res<'w, Tick>);
+    //type Param<'w, 's> = (Query<'w, 's, &'static PathMap>, Res<'w, Tick>);
+    type Param<'w, 's> = Query<'w, 's, &'static Player, Changed<Transform>>;
 
     // This function checks if the given entity should trigger
     // It runs once per frame for each entity that is in a state that can transition
     // on this trigger
-    // Return `true` to trigger and `false` to not trigger
-    fn trigger(&self, _entity: Entity, (player, tick): &Self::Param<'_, '_>) -> Result<f32, f32> {
-        let mut state: Result<f32, f32> = Err(1.0);
-        if let Ok(path_map) = player.get_single() {
-            //couple state to tick
-            if let Some(last) = path_map.steps.last() {
-                if last.0.tick > tick.tick {
-                    state = Ok(0.0);
-                }
-            }
+    fn trigger(&self, _entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
+        if let Some(_) = player.iter().next() {
+            Ok(0.0)
+        } else {
+            Err(1.0)
         }
-        state
     }
 }
 #[derive(Bundle)]
@@ -275,7 +270,7 @@ pub fn update(
                             transform,
                             bevy_easings::EaseFunction::QuadraticOut,
                             bevy_easings::EasingType::Once {
-                                duration: std::time::Duration::from_millis(150),
+                                duration: std::time::Duration::from_millis(300),
                             },
                         ));
                         commands.entity(event.entity).insert(t);

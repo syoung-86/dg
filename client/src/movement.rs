@@ -38,7 +38,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
     let mut path_map: PathMap = PathMap::default();
     let mut step_tick = client_tick;
     while path.origin.cell != path.destination.cell {
-        step_tick.tick += 1;
+        step_tick.tick += 2;
         path.step();
         match path.left_click {
             LeftClick::Walk => {
