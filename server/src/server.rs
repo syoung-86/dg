@@ -6,7 +6,10 @@ use connection::{client_handler, new_renet_server, spawn_player};
 use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{Client, ComponentType, EntityType, LeftClick, Player, PlayerCommand, Tile},
+    components::{
+        Client, ComponentType, EntityType, LeftClick, Player, PlayerCommand, SpawnEvent, Sword,
+        Tile,
+    },
     resources::Tick,
     ClickEvent, TickSet, UpdateComponentEvent,
 };
@@ -15,6 +18,7 @@ use receive::{left_click, message};
 use resources::ServerLobby;
 use world::create_tiles;
 
+pub mod send;
 pub mod connection;
 pub mod events;
 pub mod plugins;
@@ -35,6 +39,7 @@ fn main() {
     app.init_resource::<Events<ChunkRequest>>();
     app.init_resource::<Events<ClientSetup>>();
     app.init_resource::<Events<LeftClickEvent>>();
+    app.init_resource::<Events<SpawnEvent>>();
     app.add_systems(
         (tick, send_tick)
             .chain()
@@ -63,9 +68,19 @@ fn main() {
             .in_schedule(CoreSchedule::FixedUpdate),
     );
     app.add_startup_system(create_tiles);
+    app.add_startup_system(spawn_item);
 
     app.add_event::<ClientSetup>();
     app.run();
+}
+
+pub fn spawn_item(mut commands: Commands, mut spawn_event: EventWriter<SpawnEvent>) {
+    let entity = commands.spawn((Sword, Tile { cell: (4, 0, 4) })).id();
+    spawn_event.send(SpawnEvent {
+        entity,
+        entity_type: EntityType::Sword(Sword),
+        tile: Tile { cell: (4, 0, 4) },
+    });
 }
 
 pub fn replicate_players(

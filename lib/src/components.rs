@@ -4,6 +4,8 @@ use bevy::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::resources::Tick;
+
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum PlayerCommand {
     LeftClick(LeftClick, Tile),
@@ -108,6 +110,7 @@ impl Path {
 pub enum EntityType {
     Tile,
     Player(Player),
+    Sword(Sword),
 }
 #[derive(Component)]
 pub struct ControlledEntity;
@@ -235,3 +238,21 @@ impl Scope {
 pub struct Player {
     pub id: u64,
 }
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub struct SpawnEvent {
+    pub entity: Entity,
+    pub entity_type: EntityType,
+    pub tile: Tile,
+}
+
+pub struct DespawnEvent(Entity);
+pub struct UpdateEvent {
+    pub entity: Entity,
+    pub component: ComponentType,
+}
+pub struct TickEvent(Tick);
+
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub struct Sword;

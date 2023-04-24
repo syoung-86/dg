@@ -2,11 +2,11 @@ use bevy::prelude::{Commands, DespawnRecursiveExt, Entity, EventWriter, Res, Res
 use bevy_renet::renet::RenetClient;
 use lib::{
     channels::ServerChannel,
-    components::{ComponentType, EntityType, Tile},
+    components::{ComponentType, EntityType, SpawnEvent, Tile, UpdateEvent},
     resources::Tick,
 };
 
-use crate::{resources::NetworkMapping, SpawnEvent, UpdateEvent};
+use crate::resources::NetworkMapping;
 
 pub fn load_message(
     mut client: ResMut<RenetClient>,
@@ -38,15 +38,14 @@ pub fn spawn_message(
     mut commands: Commands,
 ) {
     if let Some(message) = client.receive_message(ServerChannel::Spawn) {
-        let (server_entity, entity_type, tile): (Entity, EntityType, Tile) =
-            bincode::deserialize(&message).unwrap();
-        if let None = network_mapping.server.get(&server_entity) {
+        let spawn_message: SpawnEvent = bincode::deserialize(&message).unwrap();
+        if let None = network_mapping.server.get(&spawn_message.entity) {
             let entity = commands.spawn_empty().id();
-            network_mapping.add(&entity, &server_entity);
+            network_mapping.add(&entity, &spawn_message.entity);
             spawn_event.send(SpawnEvent {
                 entity,
-                entity_type,
-                tile,
+                entity_type: spawn_message.entity_type,
+                tile: spawn_message.tile,
             });
         }
     }

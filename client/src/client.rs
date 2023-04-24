@@ -26,7 +26,8 @@ use leafwing_input_manager::prelude::*;
 use lib::{
     channels::{ClientChannel, ServerChannel},
     components::{
-        ComponentType, ControlledEntity, EntityType, LeftClick, Path, Player, PlayerCommand, Tile,
+        ComponentType, ControlledEntity, DespawnEvent, EntityType, LeftClick, Path, Player,
+        PlayerCommand, SpawnEvent, TickEvent, Tile, UpdateEvent,
     },
     resources::Tick,
     ClickEvent,
@@ -199,18 +200,6 @@ impl PlayerBundle {
         }
     }
 }
-pub struct SpawnEvent {
-    entity: Entity,
-    entity_type: EntityType,
-    tile: Tile,
-}
-
-pub struct DespawnEvent(Entity);
-pub struct UpdateEvent {
-    entity: Entity,
-    component: ComponentType,
-}
-pub struct TickEvent(Tick);
 
 pub fn update(
     mut commands: Commands,
@@ -370,6 +359,7 @@ pub fn spawn(
                     ..Default::default()
                 });
             }
+            EntityType::Sword(sword) => !todo!(),
         }
     }
 }

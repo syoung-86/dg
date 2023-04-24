@@ -3,7 +3,7 @@ use bevy_renet::{
     renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
     RenetServerPlugin,
 };
-use lib::components::{Client, ComponentType, EntityType, ServerMessages};
+use lib::components::{Client, ComponentType, EntityType, ServerMessages, SpawnEvent};
 use lib::PROTOCOL_ID;
 use lib::{
     channels::{ClientChannel, ServerChannel},
@@ -64,11 +64,11 @@ pub fn client_handler(
                 let message = ServerMessages::PlayerConnected { id };
                 let message = bincode::serialize(&message).unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
-                let message: (Entity, EntityType, Tile) = (
-                    player,
-                    EntityType::Player(Player { id }),
-                    Tile { cell: (x, 0, 4) },
-                );
+                let message = SpawnEvent {
+                    entity: player,
+                    entity_type: EntityType::Player(Player { id }),
+                    tile: Tile { cell: (x, 0, 4) },
+                };
                 let message = bincode::serialize(&message).unwrap();
                 server.broadcast_message(ServerChannel::Spawn, message);
             }
