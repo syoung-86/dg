@@ -42,7 +42,7 @@ pub fn left_click(
         match event.left_click {
             LeftClick::Walk => {
                 if let Some(client) = lobby.clients.get(&event.client_id) {
-                    println!("inserted new tile");
+                    //println!("inserted new tile");
                     commands.entity(client.controlled_entity).insert(event.tile);
                     let message: (Entity, ComponentType) =
                         (client.controlled_entity, ComponentType::Tile(event.tile));

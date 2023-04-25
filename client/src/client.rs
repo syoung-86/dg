@@ -26,8 +26,8 @@ use leafwing_input_manager::prelude::*;
 use lib::{
     channels::{ClientChannel, ServerChannel},
     components::{
-        ComponentType, ControlledEntity, DespawnEvent, EntityType, LeftClick, Path, Player,
-        PlayerCommand, SpawnEvent, TickEvent, Tile, UpdateEvent,
+        ComponentType, ControlledEntity, DespawnEvent, Door, EntityType, LeftClick, Path, Player,
+        PlayerCommand, SpawnEvent, Sword, TickEvent, Tile, UpdateEvent, Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -123,7 +123,7 @@ pub fn setup_anims(
     animations: Res<Animations>,
     mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
     player_parent: Query<(Entity, &Parent, &Children)>,
-    state: Query<(Entity, Option<&Running>), Changed<Transform>>,
+    state: Query<(Entity, Option<&Running>)>,
     //mut commands: Commands,
 ) {
     for (parent, mut player) in animation_players.iter_mut() {
@@ -218,40 +218,40 @@ pub fn update(
                         let mut rotation = 0.;
                         if old_tile.cell.0 > t.cell.0 {
                             rotation = -FRAC_PI_2;
-                            println!("WEST");
+                            //println!("WEST");
                         } else if old_tile.cell.0 < t.cell.0 {
                             //rotation = 1.5;
 
                             rotation = FRAC_PI_2;
-                            println!("EAST");
+                            //println!("EAST");
                         }
                         if old_tile.cell.2 > t.cell.2 {
                             rotation = -PI;
-                            println!("NORTH");
+                            //println!("NORTH");
                         } else if old_tile.cell.2 < t.cell.2 {
                             rotation = 0.0;
-                            println!("SOUTH");
+                            //println!("SOUTH");
                         }
 
-                        println!("old_tile: {:?}, new: {:?}", old_tile, t);
+                        //println!("old_tile: {:?}, new: {:?}", old_tile, t);
 
                         if old_tile.cell.0 < t.cell.0 && old_tile.cell.2 > t.cell.2 {
-                            println!("NORTH EAST");
+                            //println!("NORTH EAST");
                             rotation = 2.2;
                         }
 
                         if old_tile.cell.0 > t.cell.0 && old_tile.cell.2 > t.cell.2 {
                             rotation = -2.2;
 
-                            println!("NORTH WEST");
+                            //println!("NORTH WEST");
                         }
 
                         if old_tile.cell.0 < t.cell.0 && old_tile.cell.2 < t.cell.2 {
                             rotation = FRAC_PI_3;
-                            println!("SOUTH EAST");
+                            //println!("SOUTH EAST");
                         }
                         if old_tile.cell.0 > t.cell.0 && old_tile.cell.2 < t.cell.2 {
-                            println!("SOUTH WEST");
+                            //println!("SOUTH WEST");
                             rotation = -FRAC_PI_3;
                         }
                         transform.rotate_y(rotation);
@@ -359,7 +359,64 @@ pub fn spawn(
                     ..Default::default()
                 });
             }
-            EntityType::Sword(sword) => !todo!(),
+            EntityType::Sword(_sword) => {
+                commands.spawn(Sword);
+                println!("spawned sword");
+            }
+            EntityType::Wall(wall) => match wall {
+                Wall::Horizontal => {
+                    commands.entity(event.entity).insert((
+                        wall,
+                        event.tile,
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 10., 0.2))),
+                            material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
+                            transform: event.tile.to_transform(),
+                            ..Default::default()
+                        },
+                    ));
+                }
+                Wall::Vertical => {
+                    commands.entity(event.entity).insert((
+                        wall,
+                        event.tile,
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 10., 1.0))),
+                            material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
+                            transform: event.tile.to_transform(),
+                            ..Default::default()
+                        },
+                    ));
+                }
+            },
+            EntityType::Door(door) => match door {
+                Door::Vertical => {
+                    commands.entity(event.entity).insert((
+                        door,
+                        event.tile,
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 10., 2.0))),
+                            material: materials.add(Color::rgb(2.0, 0.5, 0.8).into()),
+                            transform: event.tile.to_transform(),
+                            ..Default::default()
+                        },
+                    ));
+                }
+                _ => (),
+            },
+            EntityType::Lever(lever) => {
+                commands.entity(event.entity).insert((
+                    lever,
+                    event.tile,
+                    PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 1.0, 1.0))),
+                        material: materials.add(Color::rgb(1.0, 0.2, 0.0).into()),
+                        transform: event.tile.to_transform(),
+                        ..Default::default()
+                    },
+                    LeftClick::Pull,
+                ));
+            }
         }
     }
 }

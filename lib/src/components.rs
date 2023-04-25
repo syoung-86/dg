@@ -111,6 +111,9 @@ pub enum EntityType {
     Tile,
     Player(Player),
     Sword(Sword),
+    Wall(Wall),
+    Door(Door),
+    Lever(Lever),
 }
 #[derive(Component)]
 pub struct ControlledEntity;
@@ -121,6 +124,7 @@ pub enum LeftClick {
     Walk,
     Attack,
     Pickup(Option<Entity>),
+    Pull,
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Component)]
@@ -253,6 +257,23 @@ pub struct UpdateEvent {
 }
 pub struct TickEvent(Tick);
 
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
 pub struct Sword;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub enum Wall {
+    Horizontal,
+    Vertical,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub enum Door {
+    Horizontal,
+    Vertical,
+}
+
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub struct Lever {
+    
+}

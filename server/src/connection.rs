@@ -40,33 +40,37 @@ pub fn server_connection_config() -> RenetConnectionConfig {
 pub fn client_handler(
     mut server_lobby: ResMut<ServerLobby>,
     mut commands: Commands,
-    mut events: ResMut<Events<ServerEvent>>,
+    //mut events: ResMut<Events<ServerEvent>>,
+    mut events: EventReader<ServerEvent>,
     mut request_event: EventWriter<ChunkRequest>,
     mut server: ResMut<RenetServer>,
 ) {
-    for event in events.drain() {
+    for event in events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _) => {
                 println!("client connected {}", id);
                 let mut rng = rand::thread_rng();
                 let x: u32 = rng.gen_range(0..10);
                 let player = commands
-                    .spawn((EntityType::Player(Player { id }), Tile { cell: (x, 0, 4) }))
+                    .spawn((
+                        EntityType::Player(Player { id: *id }),
+                        Tile { cell: (x, 0, 4) },
+                    ))
                     .id();
                 let new_client = Client {
-                    id,
+                    id: *id,
                     scope: Scope::get(Tile { cell: (4, 0, 4) }),
                     controlled_entity: player,
                 };
                 commands.spawn(new_client);
-                request_event.send(ChunkRequest(id));
-                server_lobby.clients.insert(id, new_client);
-                let message = ServerMessages::PlayerConnected { id };
+                request_event.send(ChunkRequest(*id));
+                server_lobby.clients.insert(*id, new_client);
+                let message = ServerMessages::PlayerConnected { id: *id };
                 let message = bincode::serialize(&message).unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
                 let message = SpawnEvent {
                     entity: player,
-                    entity_type: EntityType::Player(Player { id }),
+                    entity_type: EntityType::Player(Player { id: *id }),
                     tile: Tile { cell: (x, 0, 4) },
                 };
                 let message = bincode::serialize(&message).unwrap();

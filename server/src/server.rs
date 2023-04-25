@@ -1,14 +1,17 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_renet::{renet::RenetServer, RenetServerPlugin};
+use bevy_renet::{
+    renet::{RenetServer, ServerEvent},
+    RenetServerPlugin,
+};
 use connection::{client_handler, new_renet_server, spawn_player};
 use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::{ClientChannel, ServerChannel},
     components::{
-        Client, ComponentType, EntityType, LeftClick, Player, PlayerCommand, SpawnEvent, Sword,
-        Tile,
+        Client, ComponentType, Door, EntityType, LeftClick, Lever, Player, PlayerCommand,
+        SpawnEvent, Sword, Tile, Wall,
     },
     resources::Tick,
     ClickEvent, TickSet, UpdateComponentEvent,
@@ -18,12 +21,12 @@ use receive::{left_click, message};
 use resources::ServerLobby;
 use world::create_tiles;
 
-pub mod send;
 pub mod connection;
 pub mod events;
 pub mod plugins;
 pub mod receive;
 pub mod resources;
+pub mod send;
 pub mod world;
 
 fn main() {
@@ -59,7 +62,7 @@ fn main() {
     //app.add_system(receive_clicks)
     //.init_schedule(CoreSchedule::FixedUpdate);
     app.add_systems(
-        (message, left_click, replicate_players)
+        (message, left_click, replicate_players, send_item, send_room)
             .chain()
             .in_schedule(CoreSchedule::FixedUpdate),
     );
@@ -69,18 +72,103 @@ fn main() {
     );
     app.add_startup_system(create_tiles);
     app.add_startup_system(spawn_item);
+    app.add_startup_system(spawn_room);
 
     app.add_event::<ClientSetup>();
     app.run();
 }
+pub fn send_room(
+    mut server: ResMut<RenetServer>,
+    walls: Query<(Entity, &Tile, &Wall)>,
+    doors: Query<(Entity, &Tile, &Door)>,
+    levers: Query<(Entity, &Tile, &Lever)>,
+    mut events: EventReader<ServerEvent>,
+) {
+    for event in events.iter() {
+        match event {
+            ServerEvent::ClientConnected(id, _) => {
+                println!("send item");
+                for (entity, tile, wall) in walls.iter() {
+                    let spawn_event = SpawnEvent {
+                        entity,
+                        entity_type: EntityType::Wall(*wall),
+                        tile: *tile,
+                    };
 
-pub fn spawn_item(mut commands: Commands, mut spawn_event: EventWriter<SpawnEvent>) {
-    let entity = commands.spawn((Sword, Tile { cell: (4, 0, 4) })).id();
-    spawn_event.send(SpawnEvent {
-        entity,
-        entity_type: EntityType::Sword(Sword),
-        tile: Tile { cell: (4, 0, 4) },
-    });
+                    let message = bincode::serialize(&spawn_event).unwrap();
+                    server.send_message(*id, ServerChannel::Spawn, message);
+                }
+
+                for (entity, tile, door) in doors.iter() {
+                    let spawn_event = SpawnEvent {
+                        entity,
+                        entity_type: EntityType::Door(*door),
+                        tile: *tile,
+                    };
+
+                    let message = bincode::serialize(&spawn_event).unwrap();
+                    server.send_message(*id, ServerChannel::Spawn, message);
+                }
+
+                for (entity, tile, lever) in levers.iter() {
+                    let spawn_event = SpawnEvent {
+                        entity,
+                        entity_type: EntityType::Lever(*lever),
+                        tile: *tile,
+                    };
+
+                    let message = bincode::serialize(&spawn_event).unwrap();
+                    server.send_message(*id, ServerChannel::Spawn, message);
+                }
+            }
+            _ => (),
+        }
+    }
+}
+pub fn spawn_room(mut commands: Commands) {
+    for x in 1..10 {
+        commands.spawn((Wall::Horizontal, Tile { cell: (x, 0, 0) }));
+        commands.spawn((Wall::Horizontal, Tile { cell: (x, 0, 10) }));
+    }
+
+    for z in 0..10 {
+        commands.spawn((Wall::Vertical, Tile { cell: (0, 0, z) }));
+    }
+    for z in 0..3 {
+        commands.spawn((Wall::Vertical, Tile { cell: (10, 0, z) }));
+    }
+    for z in 6..10 {
+        commands.spawn((Wall::Vertical, Tile { cell: (10, 0, z) }));
+    }
+    commands.spawn((Door::Vertical, Tile { cell: (10, 0, 4) }));
+    commands.spawn((Lever, Tile { cell: (5, 0, 5) }));
+}
+pub fn send_item(
+    mut server: ResMut<RenetServer>,
+    query: Query<Entity, With<Sword>>,
+    mut events: EventReader<ServerEvent>,
+) {
+    for event in events.iter() {
+        match event {
+            ServerEvent::ClientConnected(id, _) => {
+                println!("send item");
+                if let Ok(entity) = query.get_single() {
+                    let spawn_event = SpawnEvent {
+                        entity,
+                        entity_type: EntityType::Sword(Sword),
+                        tile: Tile { cell: (4, 0, 4) },
+                    };
+
+                    let message = bincode::serialize(&spawn_event).unwrap();
+                    server.send_message(*id, ServerChannel::Spawn, message);
+                }
+            }
+            _ => (),
+        }
+    }
+}
+pub fn spawn_item(mut commands: Commands) {
+    commands.spawn((Sword, Tile { cell: (4, 0, 4) }));
 }
 
 pub fn replicate_players(
@@ -122,7 +210,7 @@ pub fn send_chunk(
 ) {
     for request in requests.drain() {
         for client in clients.iter() {
-            println!("send load message");
+            //println!("send load message");
             if client.id == request.0 {
                 let scope: Vec<(Entity, EntityType, Tile)> = query
                     .iter()
