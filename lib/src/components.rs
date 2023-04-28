@@ -5,6 +5,10 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::resources::Tick;
+use seldom_state::prelude::*;
+
+#[derive(Copy, Clone, Debug, Serialize, Deserialize, Component)]
+pub struct Open;
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum PlayerCommand {
@@ -114,6 +118,7 @@ pub enum EntityType {
     Wall(Wall),
     Door(Door),
     Lever(Lever),
+    Dummy(Dummy),
 }
 #[derive(Component)]
 pub struct ControlledEntity;
@@ -131,6 +136,7 @@ pub enum LeftClick {
 pub enum ComponentType {
     Tile(Tile),
     Player(Player),
+    Open(Open),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -272,8 +278,13 @@ pub enum Door {
     Vertical,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub struct Lever;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
-pub struct Lever {
-    
+pub struct Dummy;
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub struct Health {
+    pub hp: u16,
 }

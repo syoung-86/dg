@@ -69,6 +69,49 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                     ));
                 }
             }
+            LeftClick::Pull => {
+                if path.origin.cell.0 != path.destination.cell.0
+                    || path.origin.cell.2 != path.destination.cell.2
+                {
+                    path_map.steps.push((
+                        step_tick.clone(),
+                        LeftClick::Walk,
+                        Tile {
+                            cell: path.origin.cell,
+                        },
+                    ));
+                } else {
+                    path_map.steps.push((
+                        step_tick.clone(),
+                        LeftClick::Pull,
+                        Tile {
+                            cell: path.origin.cell,
+                        },
+                    ));
+                }
+            }
+
+            LeftClick::Attack => {
+                if path.origin.cell.0 != path.destination.cell.0
+                    || path.origin.cell.2 != path.destination.cell.2
+                {
+                    path_map.steps.push((
+                        step_tick.clone(),
+                        LeftClick::Walk,
+                        Tile {
+                            cell: path.origin.cell,
+                        },
+                    ));
+                } else {
+                    path_map.steps.push((
+                        step_tick.clone(),
+                        LeftClick::Attack,
+                        Tile {
+                            cell: path.origin.cell,
+                        },
+                    ));
+                }
+            }
             _ => (),
         }
     }
@@ -98,11 +141,20 @@ pub fn scheduled_movement(
                         //delete_writer.send(DeleteMe(*e));
                         commands.entity(*e).despawn_recursive();
                     }
-                    LeftClick::Walk => {
+                    _=> {
                         println!("walk");
                         player_commands.send(PlayerCommand::LeftClick(*left_click, *tile));
                     }
-                    _ => (),
+                    //LeftClick::Pull => {
+                        //player_commands.send(PlayerCommand::LeftClick(*left_click, *tile));
+                        //println!("PULL");
+                    //}
+
+                    //LeftClick::Attack => {
+                        //player_commands.send(PlayerCommand::LeftClick(*left_click, *tile));
+                        //println!("PULL");
+                    //}
+                    //_ => (),
                 }
                 false // Remove the current element from the vector
             } else {

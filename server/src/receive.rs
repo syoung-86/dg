@@ -8,7 +8,7 @@ use lib::{
     ClickEvent,
 };
 
-use crate::{resources::ServerLobby, LeftClickEvent};
+use crate::{resources::ServerLobby, AttackEvent, LeftClickEvent, PullEvent};
 
 pub fn message(
     mut server: ResMut<RenetServer>,
@@ -37,6 +37,8 @@ pub fn left_click(
     mut commands: Commands,
     lobby: ResMut<ServerLobby>,
     mut left_click_event: EventReader<LeftClickEvent>,
+    mut pull_event: EventWriter<PullEvent>,
+    mut attack_event: EventWriter<AttackEvent>,
 ) {
     for event in left_click_event.iter() {
         match event.left_click {
@@ -80,7 +82,14 @@ pub fn left_click(
                     server.broadcast_message(ServerChannel::Despawn, despawn_message);
                 }
             }
+            LeftClick::Pull => {
+                println!("send pull event");
+                pull_event.send(PullEvent { tile: event.tile });
+            }
 
+            LeftClick::Attack => {
+                attack_event.send(AttackEvent { tile: event.tile });
+            }
             _ => {}
         }
     }

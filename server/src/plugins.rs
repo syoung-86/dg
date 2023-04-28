@@ -2,7 +2,10 @@ use bevy::prelude::*;
 use bevy_renet::RenetServerPlugin;
 use lib::TickSet;
 
-use crate::{events::{clear_event, ChunkRequest, ClientSetup}, LeftClickEvent};
+use crate::{
+    events::{clear_event, ChunkRequest, ClientSetup},
+    LeftClickEvent, PullEvent, AttackEvent,
+};
 
 pub struct ConfigPlugin;
 
@@ -34,6 +37,8 @@ impl Plugin for ClearEventPlugin {
             //.in_set(TickSet::Clear),
             //clear_event::<ChunkRequest>.in_base_set(CoreSet::Last),
             clear_event::<LeftClickEvent>.in_base_set(CoreSet::Last),
+            clear_event::<PullEvent>.in_base_set(CoreSet::Last),
+            clear_event::<AttackEvent>.in_base_set(CoreSet::Last),
             //.in_schedule(CoreSchedule::FixedUpdate)
             //.in_set(TickSet::Clear),
         ));

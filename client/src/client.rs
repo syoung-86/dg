@@ -26,8 +26,8 @@ use leafwing_input_manager::prelude::*;
 use lib::{
     channels::{ClientChannel, ServerChannel},
     components::{
-        ComponentType, ControlledEntity, DespawnEvent, Door, EntityType, LeftClick, Path, Player,
-        PlayerCommand, SpawnEvent, Sword, TickEvent, Tile, UpdateEvent, Wall,
+        ComponentType, ControlledEntity, DespawnEvent, Door, EntityType, Health, LeftClick, Open,
+        Path, Player, PlayerCommand, SpawnEvent, Sword, TickEvent, Tile, UpdateEvent, Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -107,6 +107,7 @@ fn main() {
     app.add_system(spawn);
     app.add_system(update);
     app.add_system(setup_anims);
+    app.add_system(open_door);
     app.add_system(client_send_player_commands);
     app.add_system(load_anims.run_if(should_load_anims));
     app.add_event::<ClickEvent>();
@@ -119,6 +120,11 @@ fn main() {
     app.run();
 }
 
+pub fn open_door(mut query: Query<&mut Transform, (Added<Open>, With<Door>)>) {
+    for mut transform in query.iter_mut() {
+        transform.rotate_y(FRAC_PI_2);
+    }
+}
 pub fn setup_anims(
     animations: Res<Animations>,
     mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
@@ -157,24 +163,28 @@ pub struct Running;
 pub struct Moving;
 
 impl Trigger for Moving {
-    // Put the parameters that your trigger needs here
-    // For concision, you may use `bevy_ecs::system::system_param::lifetimeless` variants of system
+    // put the parameters that your trigger needs here
+    // for concision, you may use `bevy_ecs::system::system_param::lifetimeless` variants of system
     // params, like so:
-    // type Param<'w, 's> = (SQuery<&'static Transform>, SRes<Time>);
-    // Triggers are immutable; you may not access system params mutably
-    // Do not query for the `StateMachine` component in this type. This, unfortunately, will panic.
-    // `Time` is included here to demonstrate how to get multiple system params
+    // type param<'w, 's> = (squery<&'static transform>, sres<time>);
+    // triggers are immutable; you may not access system params mutably
+    // do not query for the `statemachine` component in this type. this, unfortunately, will panic.
+    // `time` is included here to demonstrate how to get multiple system params
     type Ok = f32;
     type Err = f32;
-    //type Param<'w, 's> = (Query<'w, 's, &'static PathMap>, Res<'w, Tick>);
-    type Param<'w, 's> = Query<'w, 's, &'static Player, Changed<Transform>>;
+    //type param<'w, 's> = (query<'w, 's, &'static pathmap>, res<'w, tick>);
+    type Param<'w, 's> = Query<'w, 's, (Entity, &'static Player), Changed<Transform>>;
 
-    // This function checks if the given entity should trigger
-    // It runs once per frame for each entity that is in a state that can transition
+    // this function checks if the given entity should trigger
+    // it runs once per frame for each entity that is in a state that can transition
     // on this trigger
-    fn trigger(&self, _entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
-        if let Some(_) = player.iter().next() {
-            Ok(0.0)
+    fn trigger(&self, self_entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
+        if let Some((moving_entity, _)) = player.iter().next() {
+            if self_entity == moving_entity {
+                Ok(0.0)
+            } else {
+                Err(1.0)
+            }
         } else {
             Err(1.0)
         }
@@ -270,6 +280,10 @@ pub fn update(
                 }
             }
             ComponentType::Player(c) => {
+                commands.entity(event.entity).insert(c);
+            }
+
+            ComponentType::Open(c) => {
                 commands.entity(event.entity).insert(c);
             }
         };
@@ -369,7 +383,7 @@ pub fn spawn(
                         wall,
                         event.tile,
                         PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 10., 0.2))),
+                            mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 5., 0.2))),
                             material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
                             transform: event.tile.to_transform(),
                             ..Default::default()
@@ -381,7 +395,7 @@ pub fn spawn(
                         wall,
                         event.tile,
                         PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 10., 1.0))),
+                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 5., 1.0))),
                             material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
                             transform: event.tile.to_transform(),
                             ..Default::default()
@@ -395,7 +409,7 @@ pub fn spawn(
                         door,
                         event.tile,
                         PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 10., 2.0))),
+                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 5., 2.0))),
                             material: materials.add(Color::rgb(2.0, 0.5, 0.8).into()),
                             transform: event.tile.to_transform(),
                             ..Default::default()
@@ -415,6 +429,20 @@ pub fn spawn(
                         ..Default::default()
                     },
                     LeftClick::Pull,
+                ));
+            }
+            EntityType::Dummy(dummy) => {
+                commands.entity(event.entity).insert((
+                    dummy,
+                    event.tile,
+                    PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::Capsule::default())),
+                        material: materials.add(Color::rgb(0.2, 0.2, 0.2).into()),
+                        transform: event.tile.to_transform(),
+                        ..Default::default()
+                    },
+                    Health { hp: 99 },
+                    LeftClick::Attack,
                 ));
             }
         }

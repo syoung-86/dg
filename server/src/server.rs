@@ -10,8 +10,8 @@ use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::{ClientChannel, ServerChannel},
     components::{
-        Client, ComponentType, Door, EntityType, LeftClick, Lever, Player, PlayerCommand,
-        SpawnEvent, Sword, Tile, Wall,
+        Client, ComponentType, Door, Dummy, EntityType, Health, LeftClick, Lever, Open, Player,
+        PlayerCommand, SpawnEvent, Sword, Tile, Wall,
     },
     resources::Tick,
     ClickEvent, TickSet, UpdateComponentEvent,
@@ -21,6 +21,7 @@ use receive::{left_click, message};
 use resources::ServerLobby;
 use world::create_tiles;
 
+pub mod state;
 pub mod connection;
 pub mod events;
 pub mod plugins;
@@ -43,6 +44,8 @@ fn main() {
     app.init_resource::<Events<ClientSetup>>();
     app.init_resource::<Events<LeftClickEvent>>();
     app.init_resource::<Events<SpawnEvent>>();
+    app.init_resource::<Events<PullEvent>>();
+    app.init_resource::<Events<AttackEvent>>();
     app.add_systems(
         (tick, send_tick)
             .chain()
@@ -62,7 +65,14 @@ fn main() {
     //app.add_system(receive_clicks)
     //.init_schedule(CoreSchedule::FixedUpdate);
     app.add_systems(
-        (message, left_click, replicate_players, send_item, send_room)
+        (
+            message,
+            left_click,
+            replicate_players,
+            send_item,
+            send_room,
+            open_door,
+        )
             .chain()
             .in_schedule(CoreSchedule::FixedUpdate),
     );
@@ -77,11 +87,37 @@ fn main() {
     app.add_event::<ClientSetup>();
     app.run();
 }
+
+pub fn open_door(
+    mut commands: Commands,
+    mut events: EventReader<PullEvent>,
+    lever_query: Query<(&Tile, &Parent), With<Lever>>,
+    door_query: Query<Entity, With<Door>>,
+    mut server: ResMut<RenetServer>,
+) {
+    for event in events.iter() {
+        for (lever_tile, lever_parent) in lever_query.iter() {
+            if event.tile == *lever_tile {
+                for door_entity in door_query.iter() {
+                    if lever_parent.get() == door_entity {
+                        commands.entity(door_entity).insert(Open);
+                        println!("FOUND LEVER PARENT");
+                        let message =
+                            bincode::serialize(&(door_entity, ComponentType::Open(Open))).unwrap();
+                        server.broadcast_message(ServerChannel::Update, message);
+                    }
+                }
+            }
+        }
+        println!("Pull event: {:?}", event);
+    }
+}
 pub fn send_room(
     mut server: ResMut<RenetServer>,
     walls: Query<(Entity, &Tile, &Wall)>,
-    doors: Query<(Entity, &Tile, &Door)>,
+    doors: Query<(Entity, &Tile, &Door, Option<&Open>)>,
     levers: Query<(Entity, &Tile, &Lever)>,
+    dummy: Query<(Entity, &Dummy, &Tile)>,
     mut events: EventReader<ServerEvent>,
 ) {
     for event in events.iter() {
@@ -99,7 +135,17 @@ pub fn send_room(
                     server.send_message(*id, ServerChannel::Spawn, message);
                 }
 
-                for (entity, tile, door) in doors.iter() {
+                for (entity, dummy, tile) in dummy.iter() {
+                    let spawn_event = SpawnEvent {
+                        entity,
+                        entity_type: EntityType::Dummy(*dummy),
+                        tile: *tile,
+                    };
+
+                    let message = bincode::serialize(&spawn_event).unwrap();
+                    server.send_message(*id, ServerChannel::Spawn, message);
+                }
+                for (entity, tile, door, open) in doors.iter() {
                     let spawn_event = SpawnEvent {
                         entity,
                         entity_type: EntityType::Door(*door),
@@ -108,6 +154,16 @@ pub fn send_room(
 
                     let message = bincode::serialize(&spawn_event).unwrap();
                     server.send_message(*id, ServerChannel::Spawn, message);
+
+                    match open {
+                        Some(open) => {
+                            println!("MATCH OPEN");
+                            let message =
+                                bincode::serialize(&(entity, ComponentType::Open(*open))).unwrap();
+                            server.send_message(*id, ServerChannel::Update, message);
+                        }
+                        None => (),
+                    }
                 }
 
                 for (entity, tile, lever) in levers.iter() {
@@ -140,8 +196,12 @@ pub fn spawn_room(mut commands: Commands) {
     for z in 6..10 {
         commands.spawn((Wall::Vertical, Tile { cell: (10, 0, z) }));
     }
-    commands.spawn((Door::Vertical, Tile { cell: (10, 0, 4) }));
-    commands.spawn((Lever, Tile { cell: (5, 0, 5) }));
+    let door_entity = commands
+        .spawn((Door::Vertical, Tile { cell: (10, 0, 4) }))
+        .id();
+    let lever_entity = commands.spawn((Lever, Tile { cell: (5, 0, 5) })).id();
+    commands.entity(door_entity).push_children(&[lever_entity]);
+    commands.spawn((Dummy, Health { hp: 99 }, Tile { cell: (2, 0, 2) }));
 }
 pub fn send_item(
     mut server: ResMut<RenetServer>,
@@ -193,6 +253,15 @@ pub struct LeftClickEvent {
     pub tile: Tile,
 }
 
+#[derive(Debug)]
+pub struct PullEvent {
+    pub tile: Tile,
+}
+
+#[derive(Debug)]
+pub struct AttackEvent {
+    pub tile: Tile,
+}
 //#[bevycheck::system]
 pub fn tick(mut tick: ResMut<Tick>) {
     tick.tick += 1;
