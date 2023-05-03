@@ -1,6 +1,6 @@
-
-use seldom_state::prelude::*;
 use bevy::prelude::*;
+use lib::components::{Player, Tile};
+use seldom_state::prelude::*;
 #[derive(Clone, Component, Reflect)]
 #[component(storage = "SparseSet")]
 pub struct Idle;
@@ -23,7 +23,7 @@ impl Trigger for Moving {
     type Ok = f32;
     type Err = f32;
     //type param<'w, 's> = (query<'w, 's, &'static pathmap>, res<'w, tick>);
-    type Param<'w, 's> = Query<'w, 's, (Entity, &'static Player), Changed<Transform>>;
+    type Param<'w, 's> = Query<'w, 's, (Entity, &'static Player), Changed<Tile>>;
 
     // this function checks if the given entity should trigger
     // it runs once per frame for each entity that is in a state that can transition
@@ -31,11 +31,14 @@ impl Trigger for Moving {
     fn trigger(&self, self_entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
         if let Some((moving_entity, _)) = player.iter().next() {
             if self_entity == moving_entity {
+                println!("Running");
                 Ok(0.0)
             } else {
+                println!("Walk");
                 Err(1.0)
             }
         } else {
+            //println!("Walk");
             Err(1.0)
         }
     }

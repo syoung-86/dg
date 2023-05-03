@@ -10,11 +10,13 @@ use lib::{
     components::{Player, Scope, Tile},
 };
 use rand::Rng;
+use seldom_state::prelude::*;
 use std::{net::UdpSocket, time::SystemTime};
 
 use crate::{
     events::{ChunkRequest, ClientSetup},
     resources::ServerLobby,
+    state::{Idle, Moving, Running},
 };
 
 pub fn new_renet_server() -> RenetServer {
@@ -55,6 +57,14 @@ pub fn client_handler(
                     .spawn((
                         EntityType::Player(Player { id: *id }),
                         Tile { cell: (x, 0, 4) },
+                        StateMachine::new(Idle)
+                            .trans::<Idle>(Moving, Running)
+                            .insert_on_enter::<Running>(Running)
+                            .remove_on_exit::<Running, Running>()
+                            .trans::<Running>(NotTrigger(Moving), Idle)
+                            .insert_on_enter::<Idle>(Idle)
+                            .remove_on_exit::<Idle, Idle>(),
+                        Player { id: *id },
                     ))
                     .id();
                 let new_client = Client {

@@ -18,7 +18,7 @@ pub fn message(
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, ClientChannel::Command) {
             let command: PlayerCommand = bincode::deserialize(&message).unwrap();
-            println!("receive  msg {:?}", command);
+            //println!("receive  msg {:?}", command);
             match command {
                 PlayerCommand::LeftClick(left_click, tile) => {
                     left_click_event.send(LeftClickEvent {

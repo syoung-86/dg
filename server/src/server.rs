@@ -19,15 +19,17 @@ use lib::{
 use plugins::{ClearEventPlugin, ConfigPlugin};
 use receive::{left_click, message};
 use resources::ServerLobby;
+use seldom_state::prelude::*;
+use state::Moving;
 use world::create_tiles;
 
-pub mod state;
 pub mod connection;
 pub mod events;
 pub mod plugins;
 pub mod receive;
 pub mod resources;
 pub mod send;
+pub mod state;
 pub mod world;
 
 fn main() {
@@ -35,6 +37,8 @@ fn main() {
     app.add_plugins(MinimalPlugins);
     app.add_plugin(ConfigPlugin);
     app.add_plugin(ClearEventPlugin);
+    app.add_plugin(StateMachinePlugin);
+    app.add_plugin(TriggerPlugin::<Moving>::default());
 
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
     app.insert_resource(Tick::default());
@@ -240,7 +244,7 @@ pub fn replicate_players(
         for (e, tile) in players.iter() {
             let update_component: (Entity, Vec<ComponentType>) =
                 (e, vec![ComponentType::Tile(*tile)]);
-            println!("update compoennt: {:?}", update_component);
+            //println!("update component: {:?}", update_component);
             let message = bincode::serialize(&(update_component)).unwrap();
             server.send_message(client, ServerChannel::Update, message);
         }
