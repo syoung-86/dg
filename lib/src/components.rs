@@ -1,6 +1,7 @@
 use bevy::{
     ecs::entity::{EntityMap, MapEntities, MapEntitiesError},
     prelude::*,
+    utils::{HashMap, HashSet},
 };
 use serde::{Deserialize, Serialize};
 
@@ -137,6 +138,7 @@ pub enum ComponentType {
     Tile(Tile),
     Player(Player),
     Open(Open),
+    Health(Health),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -151,10 +153,11 @@ pub enum ServerMessages {
     PlayerDisconnected { id: u64 },
 }
 
-#[derive(Clone, Copy, Serialize, Deserialize, Component, Debug)]
+#[derive(Clone, Serialize, Deserialize, Component, Debug)]
 pub struct Client {
     pub id: u64,
     pub scope: Scope,
+    pub scoped_entities: HashSet<Entity>,
     pub controlled_entity: Entity,
 }
 #[derive(
@@ -193,6 +196,7 @@ pub struct Scope {
     pub down: Tile,
 }
 
+const SCOPE_DISTANCE: u32 = 20;
 impl Scope {
     pub fn get(start: Tile) -> Scope {
         let mut scope = Scope::default();
@@ -200,17 +204,17 @@ impl Scope {
         let mut bottom_right = start;
         let mut up = start;
         let mut down = start;
-        top_left.cell.0 += 20;
-        top_left.cell.2 += 20;
+        top_left.cell.0 += SCOPE_DISTANCE;
+        top_left.cell.2 += SCOPE_DISTANCE;
 
-        if bottom_right.cell.0 > 20 {
-            bottom_right.cell.0 -= 20;
+        if bottom_right.cell.0 > SCOPE_DISTANCE {
+            bottom_right.cell.0 -= SCOPE_DISTANCE;
         } else {
             bottom_right.cell.0 = 0;
         }
 
-        if bottom_right.cell.2 > 20 {
-            bottom_right.cell.2 -= 20;
+        if bottom_right.cell.2 > SCOPE_DISTANCE {
+            bottom_right.cell.2 -= SCOPE_DISTANCE;
         } else {
             bottom_right.cell.2 = 0;
         }
@@ -230,7 +234,7 @@ impl Scope {
         scope
     }
 
-    pub fn check(&self, pos: Tile) -> bool {
+    pub fn check(&self, pos: &Tile) -> bool {
         let x = pos.cell.0;
         let z = pos.cell.2;
 
@@ -249,14 +253,21 @@ pub struct Player {
     pub id: u64,
 }
 
+pub enum GameEvent {
+    Spawn(SpawnEvent),
+    Despawn(DespawnEvent),
+    Update(UpdateEvent),
+}
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
 pub struct SpawnEvent {
     pub entity: Entity,
     pub entity_type: EntityType,
     pub tile: Tile,
 }
+#[derive(Serialize, Deserialize)]
+pub struct DespawnEvent(pub Entity);
 
-pub struct DespawnEvent(Entity);
+#[derive(Serialize, Deserialize)]
 pub struct UpdateEvent {
     pub entity: Entity,
     pub component: ComponentType,
@@ -284,7 +295,8 @@ pub struct Lever;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
 pub struct Dummy;
 
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+#[derive(Default, Reflect,Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+#[reflect(Component)]
 pub struct Health {
     pub hp: u16,
 }

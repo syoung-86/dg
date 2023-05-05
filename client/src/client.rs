@@ -117,6 +117,7 @@ fn main() {
     app.add_event::<UpdateEvent>();
     app.add_event::<TickEvent>();
     app.register_type::<Tile>();
+    app.register_type::<Health>();
     app.run();
 }
 
@@ -284,6 +285,9 @@ pub fn update(
             }
 
             ComponentType::Open(c) => {
+                commands.entity(event.entity).insert(c);
+            }
+            ComponentType::Health(c) => {
                 commands.entity(event.entity).insert(c);
             }
         };

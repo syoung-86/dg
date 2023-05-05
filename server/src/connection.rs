@@ -1,9 +1,9 @@
-use bevy::prelude::*;
+use bevy::{prelude::*, utils::HashSet};
 use bevy_renet::{
     renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
     RenetServerPlugin,
 };
-use lib::components::{Client, ComponentType, EntityType, ServerMessages, SpawnEvent};
+use lib::components::{Client, ComponentType, EntityType, Health, ServerMessages, SpawnEvent};
 use lib::PROTOCOL_ID;
 use lib::{
     channels::{ClientChannel, ServerChannel},
@@ -56,7 +56,7 @@ pub fn client_handler(
                 let player = commands
                     .spawn((
                         EntityType::Player(Player { id: *id }),
-                        Tile { cell: (x, 0, 4) },
+                        Tile { cell: (x, 0, 0) },
                         StateMachine::new(Idle)
                             .trans::<Idle>(Moving, Running)
                             .insert_on_enter::<Running>(Running)
@@ -65,15 +65,23 @@ pub fn client_handler(
                             .insert_on_enter::<Idle>(Idle)
                             .remove_on_exit::<Idle, Idle>(),
                         Player { id: *id },
+                        Health { hp: 1 },
                     ))
                     .id();
                 let new_client = Client {
                     id: *id,
-                    scope: Scope::get(Tile { cell: (4, 0, 4) }),
+                    scope: Scope::get(Tile { cell: (0, 0, 0) }),
+                    scoped_entities: HashSet::new(),
                     controlled_entity: player,
                 };
                 commands.spawn(new_client);
                 request_event.send(ChunkRequest(*id));
+                let new_client = Client {
+                    id: *id,
+                    scope: Scope::get(Tile { cell: (0, 0, 0) }),
+                    scoped_entities: HashSet::new(),
+                    controlled_entity: player,
+                };
                 server_lobby.clients.insert(*id, new_client);
                 let message = ServerMessages::PlayerConnected { id: *id };
                 let message = bincode::serialize(&message).unwrap();

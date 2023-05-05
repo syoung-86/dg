@@ -10,8 +10,8 @@ use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::{ClientChannel, ServerChannel},
     components::{
-        Client, ComponentType, Door, Dummy, EntityType, Health, LeftClick, Lever, Open, Player,
-        PlayerCommand, SpawnEvent, Sword, Tile, Wall,
+        Client, ComponentType, DespawnEvent, Door, Dummy, EntityType, Health, LeftClick, Lever,
+        Open, Player, PlayerCommand, Scope, SpawnEvent, Sword, Tile, UpdateEvent, Wall,
     },
     resources::Tick,
     ClickEvent, TickSet, UpdateComponentEvent,
@@ -20,7 +20,7 @@ use plugins::{ClearEventPlugin, ConfigPlugin};
 use receive::{left_click, message};
 use resources::ServerLobby;
 use seldom_state::prelude::*;
-use state::Moving;
+use state::{send_state, Moving};
 use world::create_tiles;
 
 pub mod connection;
@@ -70,12 +70,14 @@ fn main() {
     //.init_schedule(CoreSchedule::FixedUpdate);
     app.add_systems(
         (
+            create_scope,
+            //entered_left_scope,
             message,
             left_click,
-            replicate_players,
-            send_item,
-            send_room,
-            open_door,
+            //replicate_players,
+            send_state,
+            change_health,
+            update_health,
         )
             .chain()
             .in_schedule(CoreSchedule::FixedUpdate),
@@ -85,106 +87,118 @@ fn main() {
             .in_schedule(CoreSchedule::FixedUpdate),
     );
     app.add_startup_system(create_tiles);
-    app.add_startup_system(spawn_item);
     app.add_startup_system(spawn_room);
-
+    //app.add_system(send_state);
     app.add_event::<ClientSetup>();
     app.run();
 }
 
-pub fn open_door(
-    mut commands: Commands,
-    mut events: EventReader<PullEvent>,
-    lever_query: Query<(&Tile, &Parent), With<Lever>>,
-    door_query: Query<Entity, With<Door>>,
-    mut server: ResMut<RenetServer>,
+pub fn change_health(mut query: Query<&mut Health>, tick: Res<Tick>) {
+    for mut hp in query.iter_mut() {
+        if tick.tick % 10 == 0 {
+            hp.hp += 1;
+        }
+    }
+}
+pub fn create_scope(
+    mut clients: Query<&mut Client, Added<Client>>,
+    entities: Query<(Entity, &Tile)>,
 ) {
-    for event in events.iter() {
-        for (lever_tile, lever_parent) in lever_query.iter() {
-            if event.tile == *lever_tile {
-                for door_entity in door_query.iter() {
-                    if lever_parent.get() == door_entity {
-                        commands.entity(door_entity).insert(Open);
-                        println!("FOUND LEVER PARENT");
-                        let message =
-                            bincode::serialize(&(door_entity, ComponentType::Open(Open))).unwrap();
-                        server.broadcast_message(ServerChannel::Update, message);
+    for mut client in clients.iter_mut() {
+        for (e, t) in entities.iter() {
+            if client.scope.check(&t) {
+                client.scoped_entities.insert(e);
+                //println!("added e into client: {:?}", client.id);
+            }
+        }
+    }
+}
+
+pub fn entered_left_scope(
+    mut clients: Query<&mut Client>,
+    entities: Query<(Entity, &Tile, &EntityType), Changed<Tile>>,
+    mut server: ResMut<RenetServer>,
+    players: Query<(Entity, &Tile), Changed<Tile>>,
+) {
+    for mut client in clients.iter_mut() {
+        for (e, t) in players.iter() {
+            if client.controlled_entity == e {
+                client.scope = Scope::get(*t);
+                println!("updated scope");
+            }
+        }
+        for (entity, tile, entity_type) in entities.iter() {
+            if client.scoped_entities.contains(&entity) {
+                if !client.scope.check(tile) {
+                    client.scoped_entities.remove(&entity);
+                    //DESPAWN
+                    let message = bincode::serialize(&entity).unwrap();
+                    server.send_message(client.id, ServerChannel::Despawn, message)
+                }
+            } else {
+                if client.scope.check(tile) {
+                    println!("scope spawn");
+                    client.scoped_entities.insert(entity);
+                    let message = SpawnEvent {
+                        entity,
+                        entity_type: *entity_type,
+                        tile: *tile,
+                    };
+                    let message = bincode::serialize(&message).unwrap();
+                    server.send_message(client.id, ServerChannel::Spawn, message);
+                }
+            }
+        }
+    }
+}
+
+macro_rules! update_in_scope {
+    ($fn_name:ident, $type_name:ident) => {
+        pub fn $fn_name(
+            clients: Query<&Client>,
+            components: Query<(Entity, &$type_name), Changed<$type_name>>,
+            mut server: ResMut<RenetServer>,
+        ) {
+            for client in clients.iter() {
+                for (entity, component) in components.iter() {
+                    if client.scoped_entities.contains(&entity) {
+                        let message = UpdateEvent {
+                            entity,
+                            component: ComponentType::$type_name(*component),
+                        };
+                        let message = bincode::serialize(&message).unwrap();
+                        server.send_message(client.id, ServerChannel::Update, message);
                     }
                 }
             }
         }
-        println!("Pull event: {:?}", event);
-    }
+    };
 }
-pub fn send_room(
-    mut server: ResMut<RenetServer>,
-    walls: Query<(Entity, &Tile, &Wall)>,
-    doors: Query<(Entity, &Tile, &Door, Option<&Open>)>,
-    levers: Query<(Entity, &Tile, &Lever)>,
-    dummy: Query<(Entity, &Dummy, &Tile)>,
-    mut events: EventReader<ServerEvent>,
-) {
-    for event in events.iter() {
-        match event {
-            ServerEvent::ClientConnected(id, _) => {
-                println!("send item");
-                for (entity, tile, wall) in walls.iter() {
-                    let spawn_event = SpawnEvent {
-                        entity,
-                        entity_type: EntityType::Wall(*wall),
-                        tile: *tile,
-                    };
 
-                    let message = bincode::serialize(&spawn_event).unwrap();
-                    server.send_message(*id, ServerChannel::Spawn, message);
-                }
-
-                for (entity, dummy, tile) in dummy.iter() {
-                    let spawn_event = SpawnEvent {
-                        entity,
-                        entity_type: EntityType::Dummy(*dummy),
-                        tile: *tile,
-                    };
-
-                    let message = bincode::serialize(&spawn_event).unwrap();
-                    server.send_message(*id, ServerChannel::Spawn, message);
-                }
-                for (entity, tile, door, open) in doors.iter() {
-                    let spawn_event = SpawnEvent {
-                        entity,
-                        entity_type: EntityType::Door(*door),
-                        tile: *tile,
-                    };
-
-                    let message = bincode::serialize(&spawn_event).unwrap();
-                    server.send_message(*id, ServerChannel::Spawn, message);
-
-                    match open {
-                        Some(open) => {
-                            println!("MATCH OPEN");
-                            let message =
-                                bincode::serialize(&(entity, ComponentType::Open(*open))).unwrap();
-                            server.send_message(*id, ServerChannel::Update, message);
-                        }
-                        None => (),
-                    }
-                }
-
-                for (entity, tile, lever) in levers.iter() {
-                    let spawn_event = SpawnEvent {
-                        entity,
-                        entity_type: EntityType::Lever(*lever),
-                        tile: *tile,
-                    };
-
-                    let message = bincode::serialize(&spawn_event).unwrap();
-                    server.send_message(*id, ServerChannel::Spawn, message);
-                }
-            }
-            _ => (),
-        }
-    }
-}
+update_in_scope!(update_health, Health);
+//pub fn update_in_scope(
+//clients: Query<&Client>,
+//components: Query<(Entity, &Health), Changed<Health>>,
+//mut server: ResMut<RenetServer>,
+//) {
+//for client in clients.iter() {
+//for (entity, component) in components.iter() {
+//if client.scoped_entities.contains(&entity) {
+//let message = UpdateEvent {
+//entity,
+//component: ComponentType::Health(*component),
+//};
+//let message = bincode::serialize(&message).unwrap();
+//server.send_message(client.id, ServerChannel::Update, message);
+//}
+//}
+//}
+//}
+// scope
+// check everything in scope,
+// hashset of all e's in scope
+// know if something enters/leaves scope
+// macro that
 pub fn spawn_room(mut commands: Commands) {
     for x in 1..10 {
         commands.spawn((Wall::Horizontal, Tile { cell: (x, 0, 0) }));
@@ -207,34 +221,6 @@ pub fn spawn_room(mut commands: Commands) {
     commands.entity(door_entity).push_children(&[lever_entity]);
     commands.spawn((Dummy, Health { hp: 99 }, Tile { cell: (2, 0, 2) }));
 }
-pub fn send_item(
-    mut server: ResMut<RenetServer>,
-    query: Query<Entity, With<Sword>>,
-    mut events: EventReader<ServerEvent>,
-) {
-    for event in events.iter() {
-        match event {
-            ServerEvent::ClientConnected(id, _) => {
-                println!("send item");
-                if let Ok(entity) = query.get_single() {
-                    let spawn_event = SpawnEvent {
-                        entity,
-                        entity_type: EntityType::Sword(Sword),
-                        tile: Tile { cell: (4, 0, 4) },
-                    };
-
-                    let message = bincode::serialize(&spawn_event).unwrap();
-                    server.send_message(*id, ServerChannel::Spawn, message);
-                }
-            }
-            _ => (),
-        }
-    }
-}
-pub fn spawn_item(mut commands: Commands) {
-    commands.spawn((Sword, Tile { cell: (4, 0, 4) }));
-}
-
 pub fn replicate_players(
     mut server: ResMut<RenetServer>,
     players: Query<(Entity, &Tile), (With<Player>, Changed<Tile>)>,
@@ -287,7 +273,7 @@ pub fn send_chunk(
             if client.id == request.0 {
                 let scope: Vec<(Entity, EntityType, Tile)> = query
                     .iter()
-                    .filter(|(_entity, _entity_type, pos)| client.scope.check(**pos))
+                    .filter(|(_entity, _entity_type, pos)| client.scope.check(*pos))
                     .map(|(entity, entity_type, pos)| (entity, entity_type.clone(), *pos))
                     .collect();
                 let message = bincode::serialize(&scope).unwrap();
