@@ -46,12 +46,12 @@ pub fn left_click(
                 if let Some(client) = lobby.clients.get(&event.client_id) {
                     //println!("inserted new tile");
                     commands.entity(client.controlled_entity).insert(event.tile);
-                    let message = UpdateEvent {
-                        entity: client.controlled_entity,
-                        component: ComponentType::Tile(event.tile),
-                    };
-                    let serd_message = bincode::serialize(&message).unwrap();
-                    server.broadcast_message(ServerChannel::Update, serd_message);
+                    //let message = UpdateEvent {
+                        //entity: client.controlled_entity,
+                        //component: ComponentType::Tile(event.tile),
+                    //};
+                    //let serd_message = bincode::serialize(&message).unwrap();
+                    //server.broadcast_message(ServerChannel::Update, serd_message);
                     //println!("walk");
                 }
             }

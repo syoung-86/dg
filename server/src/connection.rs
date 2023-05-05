@@ -89,7 +89,7 @@ pub fn client_handler(
                 let message = SpawnEvent {
                     entity: player,
                     entity_type: EntityType::Player(Player { id: *id }),
-                    tile: Tile { cell: (x, 0, 4) },
+                    tile: Tile { cell: (x, 0, 0) },
                 };
                 let message = bincode::serialize(&message).unwrap();
                 server.broadcast_message(ServerChannel::Spawn, message);

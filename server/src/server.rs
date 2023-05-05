@@ -50,6 +50,7 @@ fn main() {
     app.init_resource::<Events<SpawnEvent>>();
     app.init_resource::<Events<PullEvent>>();
     app.init_resource::<Events<AttackEvent>>();
+    app.init_resource::<Events<ServerUpdateEvent>>();
     app.add_systems(
         (tick, send_tick)
             .chain()
@@ -75,9 +76,11 @@ fn main() {
             message,
             left_click,
             //replicate_players,
-            send_state,
-            change_health,
-            update_health,
+            //send_state,
+            //change_health,
+            update_tile,
+            //update_health,
+            send_updates,
         )
             .chain()
             .in_schedule(CoreSchedule::FixedUpdate),
@@ -106,7 +109,7 @@ pub fn create_scope(
 ) {
     for mut client in clients.iter_mut() {
         for (e, t) in entities.iter() {
-            if client.scope.check(&t) {
+            if client.scope.check(&t) && !client.scoped_entities.contains(&e) {
                 client.scoped_entities.insert(e);
                 //println!("added e into client: {:?}", client.id);
             }
@@ -152,25 +155,43 @@ pub fn entered_left_scope(
     }
 }
 
+pub struct ServerUpdateEvent {
+    event: UpdateEvent,
+    client_id: u64,
+}
+
+pub fn send_updates(
+    mut update_event: EventReader<ServerUpdateEvent>,
+    mut server: ResMut<RenetServer>,
+) {
+    for event in update_event.iter() {
+        let message = bincode::serialize(&event.event).unwrap();
+        server.send_message(event.client_id, ServerChannel::Update, message);
+    }
+}
 macro_rules! update_in_scope {
     ($fn_name:ident, $type_name:ident) => {
         pub fn $fn_name(
             clients: Query<&Client>,
             components: Query<(Entity, &$type_name), Changed<$type_name>>,
-            mut server: ResMut<RenetServer>,
+            mut update_event: EventWriter<ServerUpdateEvent>,
         ) {
             for client in clients.iter() {
                 for (entity, component) in components.iter() {
-                    if client.scoped_entities.contains(&entity) {
-                        let message = UpdateEvent {
+                    //if client.scoped_entities.contains(&entity) {
+                    let event = UpdateEvent {
                         entity,
                         component: ComponentType::$type_name(*component),
-                        };
-                        //let message: (Entity, ComponentType) =
-                            //(entity, ComponentType::$type_name(*component));
-                        let message = bincode::serialize(&message).unwrap();
-                        server.send_message(client.id, ServerChannel::Update, message);
-                    }
+                    };
+                    //let message: (Entity, ComponentType) =
+                    //(entity, ComponentType::$type_name(*component));
+                    //let message = bincode::serialize(&message).unwrap();
+                    //server.send_message(client.id, ServerChannel::Update, message);
+                    update_event.send(ServerUpdateEvent {
+                        event,
+                        client_id: client.id,
+                    });
+                    //}
                 }
             }
         }
@@ -178,6 +199,7 @@ macro_rules! update_in_scope {
 }
 
 update_in_scope!(update_health, Health);
+update_in_scope!(update_tile, Tile);
 //pub fn update_in_scope(
 //clients: Query<&Client>,
 //components: Query<(Entity, &Health), Changed<Health>>,
@@ -260,7 +282,7 @@ pub fn send_chunk(
             if client.id == request.0 {
                 let scope: Vec<(Entity, EntityType, Tile)> = query
                     .iter()
-                    .filter(|(_entity, _entity_type, pos)| client.scope.check(*pos))
+                    //.filter(|(_entity, _entity_type, pos)| client.scope.check(*pos))
                     .map(|(entity, entity_type, pos)| (entity, entity_type.clone(), *pos))
                     .collect();
                 let message = bincode::serialize(&scope).unwrap();
