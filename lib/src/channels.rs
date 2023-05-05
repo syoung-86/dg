@@ -85,9 +85,13 @@ impl ServerChannel {
                 ..Default::default()
             }
             .into(),
-            UnreliableChannelConfig {
+            //UnreliableChannelConfig {
+                //channel_id: Self::Update.into(),
+                //sequenced: true,
+                //..Default::default()
+            ReliableChannelConfig {
                 channel_id: Self::Update.into(),
-                sequenced: true,
+                message_resend_time: Duration::from_millis(200),
                 ..Default::default()
             }
             .into(),

@@ -163,9 +163,11 @@ macro_rules! update_in_scope {
                 for (entity, component) in components.iter() {
                     if client.scoped_entities.contains(&entity) {
                         let message = UpdateEvent {
-                            entity,
-                            component: ComponentType::$type_name(*component),
+                        entity,
+                        component: ComponentType::$type_name(*component),
                         };
+                        //let message: (Entity, ComponentType) =
+                            //(entity, ComponentType::$type_name(*component));
                         let message = bincode::serialize(&message).unwrap();
                         server.send_message(client.id, ServerChannel::Update, message);
                     }
@@ -220,21 +222,6 @@ pub fn spawn_room(mut commands: Commands) {
     let lever_entity = commands.spawn((Lever, Tile { cell: (5, 0, 5) })).id();
     commands.entity(door_entity).push_children(&[lever_entity]);
     commands.spawn((Dummy, Health { hp: 99 }, Tile { cell: (2, 0, 2) }));
-}
-pub fn replicate_players(
-    mut server: ResMut<RenetServer>,
-    players: Query<(Entity, &Tile), (With<Player>, Changed<Tile>)>,
-    //clients: Query<&ClientInfo>,
-) {
-    for client in server.clients_id().into_iter() {
-        for (e, tile) in players.iter() {
-            let update_component: (Entity, Vec<ComponentType>) =
-                (e, vec![ComponentType::Tile(*tile)]);
-            //println!("update component: {:?}", update_component);
-            let message = bincode::serialize(&(update_component)).unwrap();
-            server.send_message(client, ServerChannel::Update, message);
-        }
-    }
 }
 #[derive(Debug)]
 pub struct LeftClickEvent {
