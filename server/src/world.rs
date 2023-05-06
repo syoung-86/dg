@@ -4,8 +4,8 @@ use lib::components::{Client, EntityType, Instance, Player, Scope, Tile};
 pub fn create_tiles(mut commands: Commands) {
     let instance = commands.spawn(Instance).id();
     let y: u32 = 0;
-    for x in (0..100).step_by(10) {
-        for z in (0..100).step_by(10) {
+    for x in (0..20).step_by(10) {
+        for z in (0..20).step_by(10) {
             let tiles = spawn_chunk(&mut commands, (x, y, z));
             for child in tiles {
                 commands.entity(instance).push_children(&[child]);

@@ -196,7 +196,7 @@ pub struct Scope {
     pub down: Tile,
 }
 
-const SCOPE_DISTANCE: u32 = 20;
+const SCOPE_DISTANCE: u32 = 10;
 impl Scope {
     pub fn get(start: Tile) -> Scope {
         let mut scope = Scope::default();

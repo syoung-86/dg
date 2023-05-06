@@ -72,7 +72,7 @@ fn main() {
     app.add_systems(
         (
             create_scope,
-            //entered_left_scope,
+            entered_left_scope,
             message,
             left_click,
             //replicate_players,
@@ -119,9 +119,9 @@ pub fn create_scope(
 
 pub fn entered_left_scope(
     mut clients: Query<&mut Client>,
-    entities: Query<(Entity, &Tile, &EntityType), Changed<Tile>>,
+    entities: Query<(Entity, &Tile, &EntityType)>,
     mut server: ResMut<RenetServer>,
-    players: Query<(Entity, &Tile), Changed<Tile>>,
+    players: Query<(Entity, &Tile), (Changed<Tile>, With<Player>)>,
 ) {
     for mut client in clients.iter_mut() {
         for (e, t) in players.iter() {
@@ -178,20 +178,20 @@ macro_rules! update_in_scope {
         ) {
             for client in clients.iter() {
                 for (entity, component) in components.iter() {
-                    //if client.scoped_entities.contains(&entity) {
-                    let event = UpdateEvent {
-                        entity,
-                        component: ComponentType::$type_name(*component),
-                    };
-                    //let message: (Entity, ComponentType) =
-                    //(entity, ComponentType::$type_name(*component));
-                    //let message = bincode::serialize(&message).unwrap();
-                    //server.send_message(client.id, ServerChannel::Update, message);
-                    update_event.send(ServerUpdateEvent {
-                        event,
-                        client_id: client.id,
-                    });
-                    //}
+                    if client.scoped_entities.contains(&entity) {
+                        let event = UpdateEvent {
+                            entity,
+                            component: ComponentType::$type_name(*component),
+                        };
+                        //let message: (Entity, ComponentType) =
+                        //(entity, ComponentType::$type_name(*component));
+                        //let message = bincode::serialize(&message).unwrap();
+                        //server.send_message(client.id, ServerChannel::Update, message);
+                        update_event.send(ServerUpdateEvent {
+                            event,
+                            client_id: client.id,
+                        });
+                    }
                 }
             }
         }
@@ -282,7 +282,7 @@ pub fn send_chunk(
             if client.id == request.0 {
                 let scope: Vec<(Entity, EntityType, Tile)> = query
                     .iter()
-                    //.filter(|(_entity, _entity_type, pos)| client.scope.check(*pos))
+                    .filter(|(_entity, _entity_type, pos)| client.scope.check(*pos))
                     .map(|(entity, entity_type, pos)| (entity, entity_type.clone(), *pos))
                     .collect();
                 let message = bincode::serialize(&scope).unwrap();

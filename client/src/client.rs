@@ -331,11 +331,13 @@ pub fn spawn(
                 //.forward_events::<PointerDown, PickingEvent>()
             }
             EntityType::Player(player) => {
+                println!("event.tile:{:?}", event.tile);
                 let transform = event.tile.to_transform();
                 if let Some(gltf) = assets.get(&man_scene.0) {
                     commands.entity(event.entity).insert((
                         SceneBundle {
                             scene: gltf.scenes[0].clone(),
+                            transform,
                             ..Default::default()
                         },
                         PlayerBundle::new(&event.tile),
