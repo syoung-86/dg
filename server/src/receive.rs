@@ -12,7 +12,7 @@ use crate::{resources::ServerLobby, LeftClickEvent};
 
 pub fn message(
     mut server: ResMut<RenetServer>,
-    item_query: Query<(Entity, &EntityType)>,
+    _item_query: Query<(Entity, &EntityType)>,
     mut left_click_event: EventWriter<LeftClickEvent>,
 ) {
     for client_id in server.clients_id().into_iter() {
@@ -56,7 +56,7 @@ pub fn left_click(
 
             LeftClick::Pickup(Some(e)) => {
                 println!("pickup {:?}", e);
-                if let Some(player_entity) = lobby.clients.get(&event.client_id) {
+                if let Some(_player_entity) = lobby.clients.get(&event.client_id) {
                     //commands.entity(*player_entity).insert(tile);
                     //for (player, mut inventory) in players.iter_mut() {
                     //if *player_entity == player {

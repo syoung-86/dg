@@ -7,8 +7,8 @@ use events::{ChunkRequest, ClientSetup, ServerUpdateEvent};
 use lib::{
     channels::ServerChannel,
     components::{
-        Client, ComponentType, Door, Dummy, EntityType, Health, LeftClick, Lever, Player, Scope,
-        SpawnEvent, Tile, UpdateEvent, Wall,
+        Client, EntityType, Health, LeftClick, Player, Scope,
+        SpawnEvent, Tile,
     },
     resources::Tick,
     TickSet,
@@ -99,7 +99,7 @@ pub fn create_scope(
 ) {
     for mut client in clients.iter_mut() {
         for (e, t) in entities.iter() {
-            if client.scope.check(&t) && !client.scoped_entities.contains(&e) {
+            if client.scope.check(t) && !client.scoped_entities.contains(&e) {
                 client.scoped_entities.insert(e);
                 //println!("added e into client: {:?}", client.id);
             }
@@ -128,18 +128,16 @@ pub fn entered_left_scope(
                     let message = bincode::serialize(&entity).unwrap();
                     server.send_message(client.id, ServerChannel::Despawn, message)
                 }
-            } else {
-                if client.scope.check(tile) {
-                    //println!("scope spawn");
-                    client.scoped_entities.insert(entity);
-                    let message = SpawnEvent {
-                        entity,
-                        entity_type: *entity_type,
-                        tile: *tile,
-                    };
-                    let message = bincode::serialize(&message).unwrap();
-                    server.send_message(client.id, ServerChannel::Spawn, message);
-                }
+            } else if client.scope.check(tile) {
+                //println!("scope spawn");
+                client.scoped_entities.insert(entity);
+                let message = SpawnEvent {
+                    entity,
+                    entity_type: *entity_type,
+                    tile: *tile,
+                };
+                let message = bincode::serialize(&message).unwrap();
+                server.send_message(client.id, ServerChannel::Spawn, message);
             }
         }
     }
@@ -183,8 +181,8 @@ pub fn send_chunk(
             if client.id == request.0 {
                 let scope: Vec<(Entity, EntityType, Tile)> = query
                     .iter()
-                    .filter(|(_entity, _entity_type, pos)| client.scope.check(*pos))
-                    .map(|(entity, entity_type, pos)| (entity, entity_type.clone(), *pos))
+                    .filter(|(_entity, _entity_type, pos)| client.scope.check(pos))
+                    .map(|(entity, entity_type, pos)| (entity, *entity_type, *pos))
                     .collect();
                 let message = bincode::serialize(&scope).unwrap();
                 server.send_message(client.id, ServerChannel::Load, message);

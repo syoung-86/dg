@@ -1,12 +1,11 @@
 use bevy::{
-    ecs::entity::{EntityMap, MapEntities, MapEntitiesError},
     prelude::*,
-    utils::{HashMap, HashSet},
+    utils::{HashSet},
 };
 use serde::{Deserialize, Serialize};
 
 use crate::resources::Tick;
-use seldom_state::prelude::*;
+
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Component)]
 pub struct Open;

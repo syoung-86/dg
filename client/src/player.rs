@@ -48,7 +48,7 @@ pub fn setup_anims(
                 let entity_animate = parent_player_parent.get();
                 for (e, running) in state.iter() {
                     if entity_animate == e {
-                        if let Some(_) = running {
+                        if running.is_some() {
                             player.play(animations.0[9].clone_weak()).repeat();
                         } else {
                             player.play(animations.0[3].clone_weak()).repeat();

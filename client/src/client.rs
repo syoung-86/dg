@@ -1,18 +1,7 @@
 use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims};
 use bevy::{
-    ecs::{
-        entity::MapEntities,
-        schedule::{LogLevel, ScheduleBuildSettings},
-        system::SystemParam,
-    },
-    gltf::Gltf,
-    input::mouse,
+    ecs::schedule::{LogLevel, ScheduleBuildSettings},
     prelude::*,
-    reflect::TypeUuid,
-    render::render_resource::{
-        AsBindGroup, Extent3d, ShaderRef, Texture, TextureDescriptor, TextureDimension,
-        TextureFormat,
-    },
 };
 use bevy_easings::*;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickableMesh, PickingEvent};
@@ -34,7 +23,7 @@ use lib::{
     resources::Tick,
     ClickEvent,
 };
-use movement::{client_send_player_commands, get_path, scheduled_movement, PathMap};
+use movement::{client_send_player_commands, get_path, scheduled_movement};
 use receive::{despawn_message, load_message, spawn_message, tick, update_message};
 use resources::{ClientLobby, NetworkMapping};
 use smooth_bevy_cameras::LookTransformPlugin;
@@ -187,20 +176,17 @@ pub fn mouse_input(
     query: Query<(Entity, &LeftClick, &Tile)>,
 ) {
     for event in events.iter() {
-        match event {
-            PickingEvent::Clicked(clicked_entity) => {
-                query
-                    .iter()
-                    .filter(|(entity, _action, _)| entity == clicked_entity)
-                    .for_each(|(entity, action, tile)| {
-                        click_event.send(ClickEvent {
-                            target: entity,
-                            left_click: *action,
-                            destination: *tile,
-                        })
-                    });
-            }
-            _ => (),
+        if let PickingEvent::Clicked(clicked_entity) = event {
+            query
+                .iter()
+                .filter(|(entity, _action, _)| entity == clicked_entity)
+                .for_each(|(entity, action, tile)| {
+                    click_event.send(ClickEvent {
+                        target: entity,
+                        left_click: *action,
+                        destination: *tile,
+                    })
+                });
         }
     }
 }

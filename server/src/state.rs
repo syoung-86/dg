@@ -65,11 +65,11 @@ impl PlayerBundle {
 }
 
 pub fn send_state(running: Query<Entity, Added<Running>>, idle: Query<(Entity, Added<Idle>)>) {
-    for e in running.iter() {
+    for _e in running.iter() {
         //println!("running");
     }
 
-    for e in idle.iter() {
+    for _e in idle.iter() {
         //println!("idle");
     }
 }

@@ -1,9 +1,8 @@
 use bevy::{prelude::*, utils::HashSet};
 use bevy_renet::{
     renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
-    RenetServerPlugin,
 };
-use lib::components::{Client, ComponentType, EntityType, Health, ServerMessages, SpawnEvent};
+use lib::components::{Client, EntityType, Health, ServerMessages, SpawnEvent};
 use lib::PROTOCOL_ID;
 use lib::{
     channels::{ClientChannel, ServerChannel},
@@ -14,7 +13,7 @@ use seldom_state::prelude::*;
 use std::{net::UdpSocket, time::SystemTime};
 
 use crate::{
-    events::{ChunkRequest, ClientSetup},
+    events::{ChunkRequest},
     resources::ServerLobby,
     state::{Idle, Moving, Running},
 };
@@ -97,7 +96,7 @@ pub fn client_handler(
 
             ServerEvent::ClientDisconnected(id) => {
                 println!("client disconnected {}", id);
-                if let Some((_, client_entity)) = server_lobby.clients.remove_entry(&id) {
+                if let Some((_, client_entity)) = server_lobby.clients.remove_entry(id) {
                     commands
                         .entity(client_entity.controlled_entity)
                         .despawn_recursive();

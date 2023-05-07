@@ -43,7 +43,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
         match path.left_click {
             LeftClick::Walk => {
                 path_map.steps.push((
-                    step_tick.clone(),
+                    step_tick,
                     path.left_click,
                     Tile {
                         cell: path.origin.cell,
@@ -53,7 +53,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
             LeftClick::Pickup(Some(_)) => {
                 if path.origin.cell.1 == path.destination.cell.1 {
                     path_map.steps.push((
-                        step_tick.clone(),
+                        step_tick,
                         path.left_click,
                         Tile {
                             cell: path.origin.cell,
@@ -61,7 +61,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                     ));
                 } else {
                     path_map.steps.push((
-                        step_tick.clone(),
+                        step_tick,
                         LeftClick::Walk,
                         Tile {
                             cell: path.origin.cell,
@@ -74,7 +74,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                     || path.origin.cell.2 != path.destination.cell.2
                 {
                     path_map.steps.push((
-                        step_tick.clone(),
+                        step_tick,
                         LeftClick::Walk,
                         Tile {
                             cell: path.origin.cell,
@@ -82,7 +82,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                     ));
                 } else {
                     path_map.steps.push((
-                        step_tick.clone(),
+                        step_tick,
                         LeftClick::Pull,
                         Tile {
                             cell: path.origin.cell,
@@ -96,7 +96,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                     || path.origin.cell.2 != path.destination.cell.2
                 {
                     path_map.steps.push((
-                        step_tick.clone(),
+                        step_tick,
                         LeftClick::Walk,
                         Tile {
                             cell: path.origin.cell,
@@ -104,7 +104,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                     ));
                 } else {
                     path_map.steps.push((
-                        step_tick.clone(),
+                        step_tick,
                         LeftClick::Attack,
                         Tile {
                             cell: path.origin.cell,

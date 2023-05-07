@@ -1,13 +1,9 @@
-use std::f32::consts::{PI, TAU};
+use std::f32::consts::{PI};
 use bevy_mod_picking::PickingCameraBundle;
 
 use bevy::prelude::*;
 use lib::components::ControlledEntity;
 use smooth_bevy_cameras::{
-    controllers::{
-        orbit::{OrbitCameraBundle, OrbitCameraController},
-        unreal::{UnrealCameraBundle, UnrealCameraController},
-    },
     LookTransform, LookTransformBundle, Smoother,
 };
 pub fn setup_camera(mut commands: Commands) {

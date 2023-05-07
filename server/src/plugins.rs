@@ -3,7 +3,7 @@ use bevy_renet::RenetServerPlugin;
 use lib::TickSet;
 
 use crate::{
-    events::{clear_event, ChunkRequest, ClientSetup},
+    events::{clear_event},
     LeftClickEvent,
 };
 

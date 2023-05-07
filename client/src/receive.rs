@@ -2,7 +2,7 @@ use bevy::prelude::{Commands, DespawnRecursiveExt, Entity, EventWriter, Res, Res
 use bevy_renet::renet::RenetClient;
 use lib::{
     channels::ServerChannel,
-    components::{ComponentType, EntityType, SpawnEvent, Tile, UpdateEvent},
+    components::{EntityType, SpawnEvent, Tile, UpdateEvent},
     resources::Tick,
 };
 
@@ -18,7 +18,7 @@ pub fn load_message(
         println!("received load message");
         let load_message: Vec<(Entity, EntityType, Tile)> = bincode::deserialize(&message).unwrap();
         for (server_entity, entity_type, tile) in load_message {
-            if let None = network_mapping.server.get(&server_entity) {
+            if network_mapping.server.get(&server_entity).is_none() {
                 let entity = commands.spawn_empty().id();
                 network_mapping.add(&entity, &server_entity);
                 spawn_event.send(SpawnEvent {
@@ -39,7 +39,7 @@ pub fn spawn_message(
 ) {
     if let Some(message) = client.receive_message(ServerChannel::Spawn) {
         let spawn_message: SpawnEvent = bincode::deserialize(&message).unwrap();
-        if let None = network_mapping.server.get(&spawn_message.entity) {
+        if network_mapping.server.get(&spawn_message.entity).is_none() {
             let entity = commands.spawn_empty().id();
             network_mapping.add(&entity, &spawn_message.entity);
             spawn_event.send(SpawnEvent {

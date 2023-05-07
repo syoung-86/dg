@@ -1,4 +1,4 @@
-use bevy::{ecs::entity::EntityMap, prelude::*};
+use bevy::{prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Copy, Clone, Default, Serialize, Deserialize, Eq, PartialEq, Debug, Resource)]

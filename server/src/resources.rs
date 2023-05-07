@@ -1,4 +1,4 @@
-use bevy::{prelude::{Entity, Resource}, utils::HashMap};
+use bevy::{prelude::{Resource}, utils::HashMap};
 use lib::components::Client;
 
 #[derive(Resource, Default)]
