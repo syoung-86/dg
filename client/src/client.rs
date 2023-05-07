@@ -8,50 +8,48 @@ use bevy::{
     gltf::Gltf,
     input::mouse,
     prelude::*,
+    reflect::TypeUuid,
+    render::render_resource::{
+        AsBindGroup, Extent3d, ShaderRef, Texture, TextureDescriptor, TextureDimension,
+        TextureFormat,
+    },
 };
 use bevy_easings::*;
 use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickableMesh, PickingEvent};
+use player::{setup_anims, update_health_bar};
 use seldom_state::prelude::*;
-use std::{
-    f32::consts::FRAC_1_PI,
-    f32::consts::{FRAC_2_PI, FRAC_PI_2, FRAC_PI_3, PI},
-    time::Duration,
-};
+use std::{f32::consts::FRAC_PI_2, time::Duration};
+use sync::{spawn, update};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use bevy_renet::{renet::RenetClient, RenetClientPlugin};
+use bevy_renet::RenetClientPlugin;
 use camera::{camera_follow, setup_camera};
 use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
-    channels::{ClientChannel, ServerChannel},
     components::{
-        ComponentType, ControlledEntity, DespawnEvent, Door, EntityType, Health, LeftClick, Open,
-        Path, Player, PlayerCommand, SpawnEvent, Sword, TickEvent, Tile, UpdateEvent, Wall,
+        DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand, Running,
+        SpawnEvent, TickEvent, Tile, UpdateEvent,
     },
     resources::Tick,
     ClickEvent,
 };
 use movement::{client_send_player_commands, get_path, scheduled_movement, PathMap};
-use rand::Rng;
 use receive::{despawn_message, load_message, spawn_message, tick, update_message};
 use resources::{ClientLobby, NetworkMapping};
-use serde::{Deserialize, Serialize};
-use smooth_bevy_cameras::{
-    controllers::{orbit::OrbitCameraPlugin, unreal::UnrealCameraPlugin},
-    LookTransformPlugin,
-};
+use smooth_bevy_cameras::LookTransformPlugin;
 
-use crate::resources::ClientInfo;
 pub mod assets;
 pub mod camera;
 pub mod components;
 pub mod connection;
 pub mod movement;
+pub mod player;
 pub mod plugins;
 pub mod receive;
 pub mod resources;
 pub mod run_conditions;
+pub mod sync;
 
 #[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Move {
@@ -108,6 +106,7 @@ fn main() {
     app.add_system(update);
     app.add_system(setup_anims);
     app.add_system(open_door);
+    app.add_system(update_health_bar);
     app.add_system(client_send_player_commands);
     app.add_system(load_anims.run_if(should_load_anims));
     app.add_event::<ClickEvent>();
@@ -126,39 +125,6 @@ pub fn open_door(mut query: Query<&mut Transform, (Added<Open>, With<Door>)>) {
         transform.rotate_y(FRAC_PI_2);
     }
 }
-pub fn setup_anims(
-    animations: Res<Animations>,
-    mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
-    player_parent: Query<(Entity, &Parent, &Children)>,
-    state: Query<(Entity, Option<&Running>)>,
-    //mut commands: Commands,
-) {
-    for (parent, mut player) in animation_players.iter_mut() {
-        let player_parent_get = parent.get();
-        for (player_parent_entity, parent_player_parent, _) in player_parent.iter() {
-            if player_parent_get == player_parent_entity {
-                let entity_animate = parent_player_parent.get();
-                for (e, running) in state.iter() {
-                    if entity_animate == e {
-                        if let Some(_) = running {
-                            player.play(animations.0[9].clone_weak()).repeat();
-                        } else {
-                            player.play(animations.0[3].clone_weak()).repeat();
-                        }
-                    }
-                }
-                //commands.entity(parent_player_parent.get()).log_components();
-            }
-        }
-    }
-}
-#[derive(Clone, Component, Reflect)]
-#[component(storage = "SparseSet")]
-pub struct Idle;
-
-#[derive(Clone, Component, Reflect)]
-#[component(storage = "SparseSet")]
-pub struct Running;
 
 #[derive(Clone, Copy, FromReflect, Reflect)]
 pub struct Moving;
@@ -212,248 +178,8 @@ impl PlayerBundle {
     }
 }
 
-pub fn update(
-    mut commands: Commands,
-    mut update_event: EventReader<UpdateEvent>,
-    //mut client: ResMut<RenetClient>,
-    query: Query<(Entity, &Transform, &Tile)>,
-) {
-    for event in update_event.iter() {
-        println!("Received Update Event");
-        match event.component {
-            ComponentType::Tile(t) => {
-                for (e, old_transform, old_tile) in query.iter() {
-                    if e == event.entity {
-                        let mut transform = t.to_transform();
-                        //let old_transform = old_tile.to_transform();
-                        let mut rotation = 0.;
-                        if old_tile.cell.0 > t.cell.0 {
-                            rotation = -FRAC_PI_2;
-                            //println!("WEST");
-                        } else if old_tile.cell.0 < t.cell.0 {
-                            //rotation = 1.5;
-
-                            rotation = FRAC_PI_2;
-                            //println!("EAST");
-                        }
-                        if old_tile.cell.2 > t.cell.2 {
-                            rotation = -PI;
-                            //println!("NORTH");
-                        } else if old_tile.cell.2 < t.cell.2 {
-                            rotation = 0.0;
-                            //println!("SOUTH");
-                        }
-
-                        //println!("old_tile: {:?}, new: {:?}", old_tile, t);
-
-                        if old_tile.cell.0 < t.cell.0 && old_tile.cell.2 > t.cell.2 {
-                            //println!("NORTH EAST");
-                            rotation = 2.2;
-                        }
-
-                        if old_tile.cell.0 > t.cell.0 && old_tile.cell.2 > t.cell.2 {
-                            rotation = -2.2;
-
-                            //println!("NORTH WEST");
-                        }
-
-                        if old_tile.cell.0 < t.cell.0 && old_tile.cell.2 < t.cell.2 {
-                            rotation = FRAC_PI_3;
-                            //println!("SOUTH EAST");
-                        }
-                        if old_tile.cell.0 > t.cell.0 && old_tile.cell.2 < t.cell.2 {
-                            //println!("SOUTH WEST");
-                            rotation = -FRAC_PI_3;
-                        }
-                        transform.rotate_y(rotation);
-                        commands.entity(event.entity).insert(old_transform.ease_to(
-                            transform,
-                            bevy_easings::EaseFunction::QuadraticOut,
-                            bevy_easings::EasingType::Once {
-                                duration: std::time::Duration::from_millis(300),
-                            },
-                        ));
-                        commands.entity(event.entity).insert(t);
-                    }
-                    // else {
-                    //commands.entity(event.entity).insert((t, t.to_transform()));
-                    //}
-                }
-            }
-            ComponentType::Player(c) => {
-                commands.entity(event.entity).insert(c);
-            }
-
-            ComponentType::Open(c) => {
-                commands.entity(event.entity).insert(c);
-            }
-            ComponentType::Health(c) => {
-                commands.entity(event.entity).insert(c);
-            }
-        };
-    }
-}
-
-use bevy::animation::AnimationPlayer;
 #[derive(Resource, Default)]
 pub struct Animations(pub Vec<Handle<AnimationClip>>);
-
-pub fn spawn(
-    mut commands: Commands,
-    mut spawn_event: EventReader<SpawnEvent>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    client: Res<RenetClient>,
-    mut man_scene: ResMut<ManAssetPack>,
-    assets: Res<Assets<Gltf>>,
-) {
-    for event in spawn_event.iter() {
-        //println!(
-        //"spawn e: {:?}, type: {:?}, components: {:?}",
-        //event.entity, event.entity_type, event.tile
-        //);
-        match event.entity_type {
-            EntityType::Tile => {
-                let transform = event.tile.to_transform();
-                commands.entity(event.entity).insert((
-                    PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Box::new(1., 0.2, 1.))),
-                        material: materials.add(Color::rgb(0.2, 0.5, 0.2).into()),
-                        transform,
-                        ..Default::default()
-                    },
-                    event.tile,
-                    //PickableBundle::default(),
-                    //PickRaycastTarget::default(),
-                    //NoDeselect,
-                    LeftClick::Walk,
-                ));
-                //.forward_events::<PointerDown, PickingEvent>()
-            }
-            EntityType::Player(player) => {
-                println!("event.tile:{:?}", event.tile);
-                let transform = event.tile.to_transform();
-                if let Some(gltf) = assets.get(&man_scene.0) {
-                    commands.entity(event.entity).insert((
-                        SceneBundle {
-                            scene: gltf.scenes[0].clone(),
-                            transform,
-                            ..Default::default()
-                        },
-                        PlayerBundle::new(&event.tile),
-                        player,
-                    ));
-                } else {
-                    commands.entity(event.entity).insert((
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Capsule {
-                                rings: 10,
-                                ..default()
-                            })),
-                            material: materials.add(Color::rgb(0.8, 0.8, 0.8).into()),
-                            transform,
-                            ..Default::default()
-                        },
-                        //PickableBundle::default(),
-                        //PickRaycastTarget::default(),
-                        //NoDeselect,
-                        PlayerBundle::new(&event.tile),
-                        //LeftClick::default(),
-                    ));
-                }
-                //.forward_events::<PointerDown, PickingEvent>()
-                //
-
-                println!("spawn player: {:?}", player);
-                if player.id == client.client_id() {
-                    commands.entity(event.entity).insert(ControlledEntity);
-                }
-
-                commands.spawn(PointLightBundle {
-                    point_light: PointLight {
-                        intensity: 1500.0,
-                        shadows_enabled: true,
-                        ..Default::default()
-                    },
-                    transform: Transform::from_xyz(4.0, 8.0, 4.0),
-                    ..Default::default()
-                });
-            }
-            EntityType::Sword(_sword) => {
-                commands.spawn(Sword);
-                println!("spawned sword");
-            }
-            EntityType::Wall(wall) => match wall {
-                Wall::Horizontal => {
-                    commands.entity(event.entity).insert((
-                        wall,
-                        event.tile,
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 5., 0.2))),
-                            material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
-                            transform: event.tile.to_transform(),
-                            ..Default::default()
-                        },
-                    ));
-                }
-                Wall::Vertical => {
-                    commands.entity(event.entity).insert((
-                        wall,
-                        event.tile,
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 5., 1.0))),
-                            material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
-                            transform: event.tile.to_transform(),
-                            ..Default::default()
-                        },
-                    ));
-                }
-            },
-            EntityType::Door(door) => match door {
-                Door::Vertical => {
-                    commands.entity(event.entity).insert((
-                        door,
-                        event.tile,
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 5., 2.0))),
-                            material: materials.add(Color::rgb(2.0, 0.5, 0.8).into()),
-                            transform: event.tile.to_transform(),
-                            ..Default::default()
-                        },
-                    ));
-                }
-                _ => (),
-            },
-            EntityType::Lever(lever) => {
-                commands.entity(event.entity).insert((
-                    lever,
-                    event.tile,
-                    PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 1.0, 1.0))),
-                        material: materials.add(Color::rgb(1.0, 0.2, 0.0).into()),
-                        transform: event.tile.to_transform(),
-                        ..Default::default()
-                    },
-                    LeftClick::Pull,
-                ));
-            }
-            EntityType::Dummy(dummy) => {
-                commands.entity(event.entity).insert((
-                    dummy,
-                    event.tile,
-                    PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Capsule::default())),
-                        material: materials.add(Color::rgb(0.2, 0.2, 0.2).into()),
-                        transform: event.tile.to_transform(),
-                        ..Default::default()
-                    },
-                    Health { hp: 99 },
-                    LeftClick::Attack,
-                ));
-            }
-        }
-    }
-}
 
 pub fn mouse_input(
     mut click_event: EventWriter<ClickEvent>,

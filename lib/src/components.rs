@@ -29,6 +29,16 @@ pub enum Direction {
     NorthWest,
 }
 
+#[derive(Clone, Component, Reflect)]
+#[component(storage = "SparseSet")]
+pub struct Idle;
+
+#[derive(Component, Debug)]
+pub struct HealthBar;
+
+#[derive(Clone, Component, Reflect)]
+#[component(storage = "SparseSet")]
+pub struct Running;
 #[derive(Default, Debug, Serialize, Deserialize, Component)]
 pub struct Path {
     pub destination: Tile,
@@ -295,7 +305,9 @@ pub struct Lever;
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
 pub struct Dummy;
 
-#[derive(Default, Reflect,Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+#[derive(
+    Default, Reflect, Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component,
+)]
 #[reflect(Component)]
 pub struct Health {
     pub hp: u16,

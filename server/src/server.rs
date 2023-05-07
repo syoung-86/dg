@@ -1,26 +1,24 @@
 use std::time::Duration;
 
 use bevy::prelude::*;
-use bevy_renet::{
-    renet::{RenetServer, ServerEvent},
-    RenetServerPlugin,
-};
-use connection::{client_handler, new_renet_server, spawn_player};
-use events::{ChunkRequest, ClientSetup};
+use bevy_renet::{renet::RenetServer, RenetServerPlugin};
+use connection::{client_handler, new_renet_server};
+use events::{ChunkRequest, ClientSetup, ServerUpdateEvent};
 use lib::{
-    channels::{ClientChannel, ServerChannel},
+    channels::ServerChannel,
     components::{
-        Client, ComponentType, DespawnEvent, Door, Dummy, EntityType, Health, LeftClick, Lever,
-        Open, Player, PlayerCommand, Scope, SpawnEvent, Sword, Tile, UpdateEvent, Wall,
+        Client, ComponentType, Door, Dummy, EntityType, Health, LeftClick, Lever, Player, Scope,
+        SpawnEvent, Tile, UpdateEvent, Wall,
     },
     resources::Tick,
-    ClickEvent, TickSet, UpdateComponentEvent,
+    TickSet,
 };
 use plugins::{ClearEventPlugin, ConfigPlugin};
 use receive::{left_click, message};
 use resources::ServerLobby;
 use seldom_state::prelude::*;
-use state::{send_state, Moving};
+use state::Moving;
+use sync::{update_tile, update_health};
 use world::create_tiles;
 
 pub mod connection;
@@ -31,6 +29,7 @@ pub mod resources;
 pub mod send;
 pub mod state;
 pub mod world;
+pub mod sync;
 
 fn main() {
     let mut app = App::new();
@@ -48,15 +47,12 @@ fn main() {
     app.init_resource::<Events<ClientSetup>>();
     app.init_resource::<Events<LeftClickEvent>>();
     app.init_resource::<Events<SpawnEvent>>();
-    app.init_resource::<Events<PullEvent>>();
-    app.init_resource::<Events<AttackEvent>>();
     app.init_resource::<Events<ServerUpdateEvent>>();
     app.add_systems(
         (tick, send_tick)
             .chain()
             .in_schedule(CoreSchedule::FixedUpdate),
     );
-    //app.add_system(send_tick.in_schedule(CoreSchedule::FixedUpdate));
     app.add_system(
         client_handler
             .in_set(TickSet::Connection)
@@ -67,19 +63,15 @@ fn main() {
             .in_set(TickSet::SendChunk)
             .in_schedule(CoreSchedule::FixedUpdate),
     );
-    //app.add_system(receive_clicks)
-    //.init_schedule(CoreSchedule::FixedUpdate);
     app.add_systems(
         (
             create_scope,
             entered_left_scope,
             message,
             left_click,
-            //replicate_players,
-            //send_state,
-            //change_health,
+            change_health,
             update_tile,
-            //update_health,
+            update_health,
             send_updates,
         )
             .chain()
@@ -90,8 +82,6 @@ fn main() {
             .in_schedule(CoreSchedule::FixedUpdate),
     );
     app.add_startup_system(create_tiles);
-    app.add_startup_system(spawn_room);
-    //app.add_system(send_state);
     app.add_event::<ClientSetup>();
     app.run();
 }
@@ -140,7 +130,7 @@ pub fn entered_left_scope(
                 }
             } else {
                 if client.scope.check(tile) {
-                    println!("scope spawn");
+                    //println!("scope spawn");
                     client.scoped_entities.insert(entity);
                     let message = SpawnEvent {
                         entity,
@@ -155,10 +145,6 @@ pub fn entered_left_scope(
     }
 }
 
-pub struct ServerUpdateEvent {
-    event: UpdateEvent,
-    client_id: u64,
-}
 
 pub fn send_updates(
     mut update_event: EventReader<ServerUpdateEvent>,
@@ -169,82 +155,6 @@ pub fn send_updates(
         server.send_message(event.client_id, ServerChannel::Update, message);
     }
 }
-macro_rules! update_in_scope {
-    ($fn_name:ident, $type_name:ident) => {
-        pub fn $fn_name(
-            clients: Query<&Client>,
-            components: Query<(Entity, &$type_name), Changed<$type_name>>,
-            mut update_event: EventWriter<ServerUpdateEvent>,
-        ) {
-            for client in clients.iter() {
-                for (entity, component) in components.iter() {
-                    if client.scoped_entities.contains(&entity) {
-                        let event = UpdateEvent {
-                            entity,
-                            component: ComponentType::$type_name(*component),
-                        };
-                        //let message: (Entity, ComponentType) =
-                        //(entity, ComponentType::$type_name(*component));
-                        //let message = bincode::serialize(&message).unwrap();
-                        //server.send_message(client.id, ServerChannel::Update, message);
-                        update_event.send(ServerUpdateEvent {
-                            event,
-                            client_id: client.id,
-                        });
-                    }
-                }
-            }
-        }
-    };
-}
-
-update_in_scope!(update_health, Health);
-update_in_scope!(update_tile, Tile);
-//pub fn update_in_scope(
-//clients: Query<&Client>,
-//components: Query<(Entity, &Health), Changed<Health>>,
-//mut server: ResMut<RenetServer>,
-//) {
-//for client in clients.iter() {
-//for (entity, component) in components.iter() {
-//if client.scoped_entities.contains(&entity) {
-//let message = UpdateEvent {
-//entity,
-//component: ComponentType::Health(*component),
-//};
-//let message = bincode::serialize(&message).unwrap();
-//server.send_message(client.id, ServerChannel::Update, message);
-//}
-//}
-//}
-//}
-// scope
-// check everything in scope,
-// hashset of all e's in scope
-// know if something enters/leaves scope
-// macro that
-pub fn spawn_room(mut commands: Commands) {
-    for x in 1..10 {
-        commands.spawn((Wall::Horizontal, Tile { cell: (x, 0, 0) }));
-        commands.spawn((Wall::Horizontal, Tile { cell: (x, 0, 10) }));
-    }
-
-    for z in 0..10 {
-        commands.spawn((Wall::Vertical, Tile { cell: (0, 0, z) }));
-    }
-    for z in 0..3 {
-        commands.spawn((Wall::Vertical, Tile { cell: (10, 0, z) }));
-    }
-    for z in 6..10 {
-        commands.spawn((Wall::Vertical, Tile { cell: (10, 0, z) }));
-    }
-    let door_entity = commands
-        .spawn((Door::Vertical, Tile { cell: (10, 0, 4) }))
-        .id();
-    let lever_entity = commands.spawn((Lever, Tile { cell: (5, 0, 5) })).id();
-    commands.entity(door_entity).push_children(&[lever_entity]);
-    commands.spawn((Dummy, Health { hp: 99 }, Tile { cell: (2, 0, 2) }));
-}
 #[derive(Debug)]
 pub struct LeftClickEvent {
     pub client_id: u64,
@@ -252,15 +162,6 @@ pub struct LeftClickEvent {
     pub tile: Tile,
 }
 
-#[derive(Debug)]
-pub struct PullEvent {
-    pub tile: Tile,
-}
-
-#[derive(Debug)]
-pub struct AttackEvent {
-    pub tile: Tile,
-}
 //#[bevycheck::system]
 pub fn tick(mut tick: ResMut<Tick>) {
     tick.tick += 1;

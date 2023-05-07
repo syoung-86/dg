@@ -4,7 +4,7 @@ use lib::TickSet;
 
 use crate::{
     events::{clear_event, ChunkRequest, ClientSetup},
-    LeftClickEvent, PullEvent, AttackEvent,
+    LeftClickEvent,
 };
 
 pub struct ConfigPlugin;
@@ -20,10 +20,6 @@ impl Plugin for ConfigPlugin {
         app.configure_set((TickSet::ReceiveReliable).after(TickSet::ReceiveUnreliable));
         app.configure_set((TickSet::SendUnreliable).after(TickSet::ReceiveReliable));
         app.configure_set((TickSet::SendReliable).after(TickSet::SendUnreliable));
-        //app.configure_set(
-        //(TickSet::Clear)
-        //.after(CoreSet::Last),
-        //);
     }
 }
 
@@ -37,10 +33,6 @@ impl Plugin for ClearEventPlugin {
             //.in_set(TickSet::Clear),
             //clear_event::<ChunkRequest>.in_base_set(CoreSet::Last),
             clear_event::<LeftClickEvent>.in_base_set(CoreSet::Last),
-            clear_event::<PullEvent>.in_base_set(CoreSet::Last),
-            clear_event::<AttackEvent>.in_base_set(CoreSet::Last),
-            //.in_schedule(CoreSchedule::FixedUpdate)
-            //.in_set(TickSet::Clear),
         ));
     }
 }

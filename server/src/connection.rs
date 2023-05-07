@@ -65,7 +65,7 @@ pub fn client_handler(
                             .insert_on_enter::<Idle>(Idle)
                             .remove_on_exit::<Idle, Idle>(),
                         Player { id: *id },
-                        Health { hp: 1 },
+                        Health { hp: 50 },
                     ))
                     .id();
                 let new_client = Client {

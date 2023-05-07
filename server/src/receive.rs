@@ -4,11 +4,11 @@ use bevy::prelude::{
 use bevy_renet::renet::RenetServer;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{ComponentType, EntityType, LeftClick, PlayerCommand, UpdateEvent},
+    components::{EntityType, LeftClick, PlayerCommand},
     ClickEvent,
 };
 
-use crate::{resources::ServerLobby, AttackEvent, LeftClickEvent, PullEvent};
+use crate::{resources::ServerLobby, LeftClickEvent};
 
 pub fn message(
     mut server: ResMut<RenetServer>,
@@ -37,8 +37,6 @@ pub fn left_click(
     mut commands: Commands,
     lobby: ResMut<ServerLobby>,
     mut left_click_event: EventReader<LeftClickEvent>,
-    mut pull_event: EventWriter<PullEvent>,
-    mut attack_event: EventWriter<AttackEvent>,
 ) {
     for event in left_click_event.iter() {
         match event.left_click {
@@ -47,8 +45,8 @@ pub fn left_click(
                     //println!("inserted new tile");
                     commands.entity(client.controlled_entity).insert(event.tile);
                     //let message = UpdateEvent {
-                        //entity: client.controlled_entity,
-                        //component: ComponentType::Tile(event.tile),
+                    //entity: client.controlled_entity,
+                    //component: ComponentType::Tile(event.tile),
                     //};
                     //let serd_message = bincode::serialize(&message).unwrap();
                     //server.broadcast_message(ServerChannel::Update, serd_message);
@@ -83,14 +81,6 @@ pub fn left_click(
                     let despawn_message = bincode::serialize(&e).unwrap();
                     server.broadcast_message(ServerChannel::Despawn, despawn_message);
                 }
-            }
-            LeftClick::Pull => {
-                println!("send pull event");
-                pull_event.send(PullEvent { tile: event.tile });
-            }
-
-            LeftClick::Attack => {
-                attack_event.send(AttackEvent { tile: event.tile });
             }
             _ => {}
         }
