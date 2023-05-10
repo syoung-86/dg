@@ -1,11 +1,7 @@
-use bevy::{
-    prelude::*,
-    utils::{HashSet},
-};
+use bevy::{prelude::*, utils::HashSet};
 use serde::{Deserialize, Serialize};
 
 use crate::resources::Tick;
-
 
 #[derive(Copy, Clone, Debug, Serialize, Deserialize, Component)]
 pub struct Open;
@@ -35,7 +31,7 @@ pub struct Idle;
 #[derive(Component, Debug)]
 pub struct HealthBar;
 
-#[derive(Clone, Component, Reflect)]
+#[derive(Serialize, Deserialize, Debug, Copy, Clone, Component, Reflect)]
 #[component(storage = "SparseSet")]
 pub struct Running;
 #[derive(Default, Debug, Serialize, Deserialize, Component)]
@@ -148,14 +144,9 @@ pub enum ComponentType {
     Player(Player),
     Open(Open),
     Health(Health),
+    Running(Running),
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct EntityBox {
-    entity: Entity,
-    components: Vec<ComponentType>,
-    tile_pos: Tile,
-}
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum ServerMessages {
     PlayerConnected { id: u64 },
@@ -178,6 +169,8 @@ pub struct Tile {
 }
 
 impl Tile {
+    pub fn new(cell: (u32, u32, u32)) -> Self { Self { cell } }
+
     pub fn to_transform(&self) -> Transform {
         let mut transform = Vec3::new(0.0, 0.0, 0.0);
         transform[0] = self.cell.0 as f32;
@@ -262,10 +255,11 @@ pub struct Player {
     pub id: u64,
 }
 
-pub enum GameEvent {
-    Spawn(SpawnEvent),
-    Despawn(DespawnEvent),
-    Update(UpdateEvent),
+pub enum SyncEvent {
+    Spawn(u64, SpawnEvent),
+    Despawn(u64, DespawnEvent),
+    Update(u64, UpdateEvent),
+    Remove(u64, RemoveEvent),
 }
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
 pub struct SpawnEvent {
@@ -273,10 +267,19 @@ pub struct SpawnEvent {
     pub entity_type: EntityType,
     pub tile: Tile,
 }
+
+impl SpawnEvent {
+    pub fn new(entity: Entity, entity_type: EntityType, tile: Tile) -> Self { Self { entity, entity_type, tile } }
+}
 #[derive(Serialize, Deserialize)]
 pub struct DespawnEvent(pub Entity);
 
 #[derive(Serialize, Deserialize)]
+pub struct RemoveEvent {
+    pub entity: Entity,
+    pub component: ComponentType,
+}
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateEvent {
     pub entity: Entity,
     pub component: ComponentType,
@@ -310,4 +313,10 @@ pub struct Dummy;
 #[reflect(Component)]
 pub struct Health {
     pub hp: u16,
+}
+
+impl Health {
+    pub fn new(hp: u16) -> Self {
+        Self { hp }
+    }
 }

@@ -4,8 +4,8 @@ use bevy::{gltf::Gltf, prelude::*};
 use bevy_easings::*;
 use bevy_renet::renet::RenetClient;
 use lib::components::{
-    ComponentType, ControlledEntity, Door, EntityType, Health, LeftClick, SpawnEvent, Sword, Tile,
-    UpdateEvent, Wall, HealthBar,
+    ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar, LeftClick, SpawnEvent,
+    Sword, Tile, UpdateEvent, Wall,
 };
 
 use crate::{assets::ManAssetPack, PlayerBundle};
@@ -88,6 +88,9 @@ pub fn update(
             ComponentType::Health(c) => {
                 commands.entity(event.entity).insert(c);
             }
+            ComponentType::Running(c) => {
+                commands.entity(event.entity).insert(c);
+            }
         };
     }
 }
@@ -132,6 +135,7 @@ pub fn spawn(
                         },
                         PlayerBundle::new(&event.tile),
                         player,
+                        Health::new(50),
                     ));
                     let mut transform = Transform::from_xyz(0., 3., 0.);
                     transform.rotate_z(FRAC_PI_2);
@@ -223,9 +227,11 @@ pub fn spawn(
                         transform: event.tile.to_transform(),
                         ..Default::default()
                     },
-                    Health { hp: 99 },
                     LeftClick::Attack,
+                    Health::new(99),
                 ));
+                let hp_bar = commands.spawn((HealthBar,)).id();
+                commands.entity(event.entity).push_children(&[hp_bar]);
             }
         }
     }

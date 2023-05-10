@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use lib::components::UpdateEvent;
 
 #[derive(Debug)]
 pub struct ClientSetup(pub u64);
@@ -11,9 +10,4 @@ pub fn clear_event<T: 'static + Send + Sync + std::fmt::Debug>(mut events: ResMu
         //println!("even clear: {:?}", event);
     }
     events.clear();
-}
-
-pub struct ServerUpdateEvent {
-    pub event: UpdateEvent,
-    pub client_id: u64,
 }

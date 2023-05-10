@@ -49,7 +49,8 @@ pub enum Move {
 }
 fn main() {
     let mut app = App::new();
-    app.add_plugins(DefaultPlugins);
+    //app.add_plugins(DefaultPlugins);
+    app.add_plugins(DefaultPlugins.build().disable::<bevy::audio::AudioPlugin>());
     app.add_plugin(RenetClientPlugin {
         clear_events: false,
     });
