@@ -23,7 +23,7 @@ pub fn get_path(
                 left_click: event.left_click,
             };
             let path_map = create_path(path, mut_tick);
-            println!("path_map: {:?}", path_map);
+            //println!("path_map: {:?}", path_map);
             commands.entity(entity).insert(path_map);
         }
     }
@@ -130,19 +130,19 @@ pub fn scheduled_movement(
                 //player_commands.send(PlayerCommand::LeftClick(*left_click, *tile));
                 match left_click {
                     LeftClick::Pickup(Some(e)) => {
-                        println!("some e: {:?}", e);
+                        //println!("some e: {:?}", e);
                         if let Some(server_entity) = network_mapping.client.remove(e) {
                             player_commands.send(PlayerCommand::LeftClick(
                                 LeftClick::Pickup(Some(server_entity)),
                                 *tile,
                             ));
-                            println!("command send pickup {:?}", e);
+                            //println!("command send pickup {:?}", e);
                         }
                         //delete_writer.send(DeleteMe(*e));
                         commands.entity(*e).despawn_recursive();
                     }
                     _=> {
-                        println!("walk");
+                        //println!("walk");
                         player_commands.send(PlayerCommand::LeftClick(*left_click, *tile));
                     }
                     //LeftClick::Pull => {
@@ -173,6 +173,6 @@ pub fn client_send_player_commands(
         let command_message = bincode::serialize(command).unwrap();
         client.send_message(ClientChannel::Command, command_message);
 
-        println!("send");
+        //println!("send");
     }
 }

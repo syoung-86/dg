@@ -15,7 +15,7 @@ pub fn load_message(
     mut commands: Commands,
 ) {
     if let Some(message) = client.receive_message(ServerChannel::Load) {
-        println!("received load message");
+        //println!("received load message");
         let load_message: Vec<(Entity, EntityType, Tile)> = bincode::deserialize(&message).unwrap();
         for (server_entity, entity_type, tile) in load_message {
             if network_mapping.server.get(&server_entity).is_none() {
@@ -56,7 +56,7 @@ pub fn update_message(
     network_mapping: Res<NetworkMapping>,
 ) {
     if let Some(message) = client.receive_message(ServerChannel::Update) {
-        println!("Received Update Message!");
+        //println!("Received Update Message!");
         //let (server_entity, component): (Entity, ComponentType) =
         //bincode::deserialize(&message).unwrap();
         let mut update_message: UpdateEvent = bincode::deserialize(&message).unwrap();

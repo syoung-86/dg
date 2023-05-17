@@ -1,10 +1,12 @@
 use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims};
 use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
+    math::vec4,
     prelude::*,
 };
 use bevy_easings::*;
-use bevy_mod_picking::{DefaultPickingPlugins, PickableBundle, PickableMesh, PickingEvent};
+use bevy_mod_picking::prelude::*;
+use input::PickingEvent;
 use player::{setup_anims, update_health_bar};
 use seldom_state::prelude::*;
 use std::{f32::consts::FRAC_PI_2, time::Duration};
@@ -32,6 +34,7 @@ pub mod assets;
 pub mod camera;
 pub mod components;
 pub mod connection;
+pub mod input;
 pub mod movement;
 pub mod player;
 pub mod plugins;
@@ -100,6 +103,7 @@ fn main() {
     app.add_system(client_send_player_commands);
     app.add_system(load_anims.run_if(should_load_anims));
     app.add_event::<ClickEvent>();
+    app.add_event::<PickingEvent>();
     app.add_event::<PlayerCommand>();
     app.add_event::<SpawnEvent>();
     app.add_event::<DespawnEvent>();
@@ -191,11 +195,38 @@ pub fn mouse_input(
         }
     }
 }
+//fn make_pickable(
+//mut commands: Commands,
+//meshes: Query<Entity, (With<Handle<Mesh>>, Without<PickableMesh>)>,
+//) {
+//for entity in meshes.iter() {
+//commands.entity(entity).insert((PickableBundle::default(),));
+//}
+//}
 fn make_pickable(
     mut commands: Commands,
-    meshes: Query<Entity, (With<Handle<Mesh>>, Without<PickableMesh>)>,
+    meshes: Query<Entity, (With<Handle<Mesh>>, Without<RaycastPickTarget>)>,
 ) {
     for entity in meshes.iter() {
-        commands.entity(entity).insert((PickableBundle::default(),));
+        commands.entity(entity).insert((
+            PickableBundle::default(),
+            RaycastPickTarget::default(),
+            OnPointer::<Down>::send_event::<PickingEvent>(),
+            HIGHLIGHT_TINT.clone(),
+        ));
     }
 }
+const HIGHLIGHT_TINT: Highlight<StandardMaterial> = Highlight {
+    hovered: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
+        base_color: matl.base_color + vec4(-0.5, -0.3, 0.9, 0.8), // hovered is blue
+        ..matl.to_owned()
+    })),
+    pressed: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
+        base_color: matl.base_color + vec4(-0.4, -0.4, 0.8, 0.8), // pressed is a different blue
+        ..matl.to_owned()
+    })),
+    selected: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
+        base_color: matl.base_color + vec4(-0.4, 0.8, -0.4, 0.0), // selected is green
+        ..matl.to_owned()
+    })),
+};

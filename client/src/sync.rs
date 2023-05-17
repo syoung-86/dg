@@ -2,6 +2,7 @@ use std::f32::consts::{FRAC_PI_2, FRAC_PI_3, PI};
 
 use bevy::{gltf::Gltf, prelude::*};
 use bevy_easings::*;
+use bevy_mod_picking::prelude::*;
 use bevy_renet::renet::RenetClient;
 use lib::components::{
     ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar, LeftClick, SpawnEvent,
@@ -17,7 +18,7 @@ pub fn update(
     query: Query<(Entity, &Transform, &Tile)>,
 ) {
     for event in update_event.iter() {
-        println!("Received Update Event");
+        //println!("Received Update Event");
         match event.component {
             ComponentType::Tile(t) => {
                 for (e, old_transform, old_tile) in query.iter() {
@@ -117,7 +118,7 @@ pub fn spawn(
                     },
                     event.tile,
                     //PickableBundle::default(),
-                    //PickRaycastTarget::default(),
+                    //RaycastPickTarget::default(),
                     //NoDeselect,
                     LeftClick::Walk,
                 ));

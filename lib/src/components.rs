@@ -90,7 +90,7 @@ impl Path {
         {
             direction = Direction::SouthEast;
         }
-        println!("Direction: {:?}", direction);
+        //println!("Direction: {:?}", direction);
         match direction {
             Direction::North => self.origin.cell.0 += 1,
             Direction::East => self.origin.cell.2 += 1,

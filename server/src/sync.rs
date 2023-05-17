@@ -81,7 +81,7 @@ pub fn entered_left_scope(
         for (e, t) in players.iter() {
             if client.controlled_entity == e {
                 client.scope = Scope::get(*t);
-                println!("updated scope");
+                //println!("updated scope");
             }
         }
         for (entity, tile, entity_type) in entities.iter() {

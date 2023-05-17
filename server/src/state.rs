@@ -31,7 +31,7 @@ impl Trigger for Moving {
     fn trigger(&self, self_entity: Entity, player: &Self::Param<'_, '_>) -> Result<f32, f32> {
         if let Some((moving_entity, _)) = player.iter().next() {
             if self_entity == moving_entity {
-                println!("Running");
+                //println!("Running");
                 Ok(1.0)
             } else {
                 //println!("Walk");

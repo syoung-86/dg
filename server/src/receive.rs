@@ -55,7 +55,7 @@ pub fn left_click(
             }
 
             LeftClick::Pickup(Some(e)) => {
-                println!("pickup {:?}", e);
+                //println!("pickup {:?}", e);
                 if let Some(_player_entity) = lobby.clients.get(&event.client_id) {
                     //commands.entity(*player_entity).insert(tile);
                     //for (player, mut inventory) in players.iter_mut() {
@@ -76,7 +76,7 @@ pub fn left_click(
                     //}
                     //}
                     commands.entity(e).despawn_recursive();
-                    println!("pickup {:?}", e);
+                    //println!("pickup {:?}", e);
 
                     let despawn_message = bincode::serialize(&e).unwrap();
                     server.broadcast_message(ServerChannel::Despawn, despawn_message);

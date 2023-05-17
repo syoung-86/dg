@@ -1,37 +1,37 @@
-use std::f32::consts::{PI};
-use bevy_mod_picking::PickingCameraBundle;
+use bevy_mod_picking::prelude::*;
+use std::f32::consts::PI;
 
 use bevy::prelude::*;
 use lib::components::ControlledEntity;
-use smooth_bevy_cameras::{
-    LookTransform, LookTransformBundle, Smoother,
-};
+use smooth_bevy_cameras::{LookTransform, LookTransformBundle, Smoother};
 pub fn setup_camera(mut commands: Commands) {
     let mut cam_transform = Transform::from_xyz(0., 8., 0.0);
     cam_transform.rotate_x(PI / 2.);
-    commands.spawn(LookTransformBundle {
-        transform: LookTransform {
-            eye: Vec3::new(0.0, 16., -4.5),
-            target: Vec3::new(0.0, 0.0, 0.0),
-            up: Vec3::Y,
-        },
-        smoother: Smoother::new(0.99),
-    })
-    .insert((
-    Camera3dBundle {
-    transform: cam_transform,
-    ..default()
-    }, PickingCameraBundle::default(),
-    //PickRaycastSource::default(),
-    ));
+    commands
+        .spawn(LookTransformBundle {
+            transform: LookTransform {
+                eye: Vec3::new(0.0, 16., -4.5),
+                target: Vec3::new(0.0, 0.0, 0.0),
+                up: Vec3::Y,
+            },
+            smoother: Smoother::new(0.99),
+        })
+        .insert((
+            Camera3dBundle {
+                transform: cam_transform,
+                ..default()
+            },
+            RaycastPickCamera::default(),
+            //PickRaycastSource::default(),
+        ));
     //commands
-        //.spawn(Camera3dBundle::default())
-        //.insert(UnrealCameraBundle::new(
-            //UnrealCameraController::default(),
-            //Vec3::new(-2.0, 5.0, 5.0),
-            //Vec3::new(0., 0., 0.),
-            //Vec3::Y,
-        //));
+    //.spawn(Camera3dBundle::default())
+    //.insert(UnrealCameraBundle::new(
+    //UnrealCameraController::default(),
+    //Vec3::new(-2.0, 5.0, 5.0),
+    //Vec3::new(0., 0., 0.),
+    //Vec3::Y,
+    //));
     //commands
     //.spawn(Camera3dBundle::default())
     //.insert(OrbitCameraBundle::new(
