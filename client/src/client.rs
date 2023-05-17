@@ -182,27 +182,12 @@ pub fn mouse_input(
 ) {
     for event in events.iter() {
         if let PickingEvent::Clicked(clicked_entity) = event {
-            query
-                .iter()
-                .filter(|(entity, _action, _)| entity == clicked_entity)
-                .for_each(|(entity, action, tile)| {
-                    click_event.send(ClickEvent {
-                        target: entity,
-                        left_click: *action,
-                        destination: *tile,
-                    })
-                });
+            if let Ok((target, left_click, destination)) = &query.get(*clicked_entity) {
+                click_event.send(ClickEvent::new(*target, **left_click, **destination));
+            }
         }
     }
 }
-//fn make_pickable(
-//mut commands: Commands,
-//meshes: Query<Entity, (With<Handle<Mesh>>, Without<PickableMesh>)>,
-//) {
-//for entity in meshes.iter() {
-//commands.entity(entity).insert((PickableBundle::default(),));
-//}
-//}
 fn make_pickable(
     mut commands: Commands,
     meshes: Query<Entity, (With<Handle<Mesh>>, Without<RaycastPickTarget>)>,

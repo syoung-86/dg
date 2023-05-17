@@ -25,5 +25,9 @@ pub struct ClickEvent {
     pub destination: Tile,
 }
 
+impl ClickEvent {
+    pub fn new(target: Entity, left_click: LeftClick, destination: Tile) -> Self { Self { target, left_click, destination } }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct UpdateComponentEvent<C: Component>(pub Entity, pub C);
