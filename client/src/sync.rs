@@ -6,16 +6,17 @@ use bevy_mod_picking::prelude::*;
 use bevy_renet::renet::RenetClient;
 use lib::components::{
     ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar, LeftClick, SpawnEvent,
-    Sword, Tile, UpdateEvent, Wall,
+    Sword, Target, Tile, UpdateEvent, Wall,
 };
 
-use crate::{assets::ManAssetPack, PlayerBundle};
+use crate::{assets::ManAssetPack, resources::NetworkMapping, PlayerBundle};
 
 pub fn update(
     mut commands: Commands,
     mut update_event: EventReader<UpdateEvent>,
     //mut client: ResMut<RenetClient>,
     query: Query<(Entity, &Transform, &Tile)>,
+    network_mapping: Res<NetworkMapping>,
 ) {
     for event in update_event.iter() {
         //println!("Received Update Event");
@@ -91,6 +92,16 @@ pub fn update(
             }
             ComponentType::Running(c) => {
                 commands.entity(event.entity).insert(c);
+            }
+            ComponentType::Target(c) => {
+                if let Some(client_entity) = c.0 {
+                    if let Some(client_entity) = network_mapping.server.get(&client_entity) {
+                        commands
+                            .entity(event.entity)
+                            .insert(Target(Some(*client_entity)));
+                        println!("inserted target");
+                    }
+                }
             }
         };
     }
@@ -228,7 +239,7 @@ pub fn spawn(
                         transform: event.tile.to_transform(),
                         ..Default::default()
                     },
-                    LeftClick::Attack,
+                    LeftClick::Attack(event.entity),
                     Health::new(99),
                 ));
                 let hp_bar = commands.spawn((HealthBar,)).id();

@@ -31,7 +31,6 @@ pub fn get_path(
 
 #[derive(Clone, Eq, PartialEq, Debug, Component, Default)]
 pub struct PathMap {
-    //pub steps: HashMap<Tick, Tile>,
     pub steps: Vec<(Tick, LeftClick, Tile)>,
 }
 pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
@@ -91,7 +90,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                 }
             }
 
-            LeftClick::Attack => {
+            LeftClick::Attack(e) => {
                 if path.origin.cell.0 != path.destination.cell.0
                     || path.origin.cell.2 != path.destination.cell.2
                 {
@@ -105,7 +104,7 @@ pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
                 } else {
                     path_map.steps.push((
                         step_tick,
-                        LeftClick::Attack,
+                        LeftClick::Attack(e),
                         Tile {
                             cell: path.origin.cell,
                         },
@@ -140,6 +139,11 @@ pub fn scheduled_movement(
                         }
                         //delete_writer.send(DeleteMe(*e));
                         commands.entity(*e).despawn_recursive();
+                    }
+                    LeftClick::Attack(e) =>{
+                        if let Some(server_entity) = network_mapping.client.get(e){
+                            player_commands.send(PlayerCommand::LeftClick(LeftClick::Attack(*server_entity), *tile));
+                        }
                     }
                     _=> {
                         //println!("walk");

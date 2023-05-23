@@ -133,7 +133,7 @@ pub struct ControlledEntity;
 pub enum LeftClick {
     #[default]
     Walk,
-    Attack,
+    Attack(Entity),
     Pickup(Option<Entity>),
     Pull,
 }
@@ -145,6 +145,7 @@ pub enum ComponentType {
     Open(Open),
     Health(Health),
     Running(Running),
+    Target(Target),
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -169,7 +170,9 @@ pub struct Tile {
 }
 
 impl Tile {
-    pub fn new(cell: (u32, u32, u32)) -> Self { Self { cell } }
+    pub fn new(cell: (u32, u32, u32)) -> Self {
+        Self { cell }
+    }
 
     pub fn to_transform(&self) -> Transform {
         let mut transform = Vec3::new(0.0, 0.0, 0.0);
@@ -269,7 +272,13 @@ pub struct SpawnEvent {
 }
 
 impl SpawnEvent {
-    pub fn new(entity: Entity, entity_type: EntityType, tile: Tile) -> Self { Self { entity, entity_type, tile } }
+    pub fn new(entity: Entity, entity_type: EntityType, tile: Tile) -> Self {
+        Self {
+            entity,
+            entity_type,
+            tile,
+        }
+    }
 }
 #[derive(Serialize, Deserialize)]
 pub struct DespawnEvent(pub Entity);
@@ -320,3 +329,6 @@ impl Health {
         Self { hp }
     }
 }
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize, Component)]
+pub struct Target(pub Option<Entity>);

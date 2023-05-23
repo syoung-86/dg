@@ -1,8 +1,8 @@
 use bevy::{prelude::*, utils::HashSet};
-use bevy_renet::{
-    renet::{RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
+use bevy_renet::renet::{
+    RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent,
 };
-use lib::components::{Client, EntityType, Health, ServerMessages, SpawnEvent};
+use lib::components::{Client, EntityType, Health, ServerMessages, SpawnEvent, Target};
 use lib::PROTOCOL_ID;
 use lib::{
     channels::{ClientChannel, ServerChannel},
@@ -13,7 +13,7 @@ use seldom_state::prelude::*;
 use std::{net::UdpSocket, time::SystemTime};
 
 use crate::{
-    events::{ChunkRequest},
+    events::ChunkRequest,
     resources::ServerLobby,
     state::{Idle, Moving, Running},
 };
@@ -64,6 +64,7 @@ pub fn client_handler(
                             .insert_on_enter::<Idle>(Idle)
                             .remove_on_exit::<Idle, Idle>(),
                         Player { id: *id },
+                        Target(None),
                         Health { hp: 50 },
                     ))
                     .id();

@@ -4,7 +4,7 @@ use bevy::prelude::{
 use bevy_renet::renet::RenetServer;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{EntityType, LeftClick, PlayerCommand},
+    components::{EntityType, LeftClick, PlayerCommand, Target},
     ClickEvent,
 };
 
@@ -82,7 +82,17 @@ pub fn left_click(
                     server.broadcast_message(ServerChannel::Despawn, despawn_message);
                 }
             }
-            _ => {}
+            LeftClick::Attack(e) => {
+                if let Some(client) = lobby.clients.get(&event.client_id) {
+                    println!("inserted target");
+                    commands
+                        .entity(client.controlled_entity)
+                        .insert(Target(Some(e)));
+                }
+            }
+            LeftClick::Pull => todo!(),
+            LeftClick::Pickup(_) => todo!(),
+            //_ => {}
         }
     }
 }

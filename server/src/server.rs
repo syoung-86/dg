@@ -18,7 +18,7 @@ use resources::ServerLobby;
 use seldom_state::prelude::*;
 use send::spawn;
 use sync::{
-    create_scope, entered_left_scope, send_chunk, send_updates, update_health, update_tile,
+    create_scope, entered_left_scope, send_chunk, send_updates, update_health, update_tile, update_target,
 };
 use world::create_tiles;
 
@@ -73,6 +73,7 @@ fn main() {
             //change_health,
             update_tile,
             update_health,
+            update_target,
             send_updates,
         )
             .chain()
