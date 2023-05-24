@@ -1,7 +1,7 @@
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::prelude::*;
-use lib::components::{Health, HealthBar, Running};
+use lib::components::{Health, HealthBar, Running, Target};
 
 use crate::Animations;
 
@@ -39,15 +39,19 @@ pub fn setup_anims(
     animations: Res<Animations>,
     mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
     player_parent: Query<(Entity, &Parent, &Children)>,
-    state: Query<(Entity, Option<&Running>)>,
+    state: Query<(Entity, Option<&Running>, Option<&Target>)>,
 ) {
     for (parent, mut player) in animation_players.iter_mut() {
         let player_parent_get = parent.get();
         for (player_parent_entity, parent_player_parent, _) in player_parent.iter() {
             if player_parent_get == player_parent_entity {
                 let entity_animate = parent_player_parent.get();
-                for (e, running) in state.iter() {
+                for (e, running, _target) in state.iter() {
                     if entity_animate == e {
+                        //if target.is_some() {
+                        //player.play(animations.0[7].clone_weak()).repeat();
+                        //break;
+                        //}
                         if running.is_some() {
                             player.play(animations.0[9].clone_weak()).repeat();
                         } else {

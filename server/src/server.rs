@@ -7,7 +7,8 @@ use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::ServerChannel,
     components::{
-        Client, Dummy, EntityType, Health, LeftClick, Player, Scope, SpawnEvent, SyncEvent, Tile,
+        Action, Client, Dummy, EntityType, Health, LeftClick, Player, Scope, SpawnEvent, SyncEvent,
+        Tile,
     },
     resources::Tick,
     TickSet,
@@ -18,7 +19,8 @@ use resources::ServerLobby;
 use seldom_state::prelude::*;
 use send::spawn;
 use sync::{
-    create_scope, entered_left_scope, send_chunk, send_updates, update_health, update_tile, update_target,
+    create_scope, entered_left_scope, send_chunk, send_updates, update_health, update_target,
+    update_tile,
 };
 use world::create_tiles;
 
@@ -48,6 +50,7 @@ fn main() {
     app.init_resource::<Events<LeftClickEvent>>();
     app.init_resource::<Events<SpawnEvent>>();
     app.init_resource::<Events<SyncEvent>>();
+    app.init_resource::<Events<CombatEvent>>();
     app.add_systems(
         (tick, send_tick)
             .chain()
@@ -91,7 +94,11 @@ fn main() {
 
 pub fn spawn_dummy(mut commands: Commands, mut spawn_event: EventWriter<SpawnEvent>) {
     let id = commands
-        .spawn((EntityType::Dummy(Dummy), Health::new(99), Tile::new((1, 0, 1))))
+        .spawn((
+            EntityType::Dummy(Dummy),
+            Health::new(99),
+            Tile::new((1, 0, 1)),
+        ))
         .id();
     spawn_event.send(SpawnEvent::new(
         id,
@@ -111,6 +118,18 @@ pub struct LeftClickEvent {
     pub client_id: u64,
     pub left_click: LeftClick,
     pub tile: Tile,
+}
+
+#[derive(Debug)]
+pub struct CombatEvent {
+    pub action: Action,
+    pub target: Entity,
+}
+
+impl CombatEvent {
+    pub fn new(target: Entity, action: Action) -> Self {
+        Self { action, target }
+    }
 }
 
 //#[bevycheck::system]

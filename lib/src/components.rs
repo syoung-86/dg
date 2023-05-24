@@ -1,4 +1,5 @@
 use bevy::{prelude::*, utils::HashSet};
+use leafwing_input_manager::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::resources::Tick;
@@ -9,6 +10,7 @@ pub struct Open;
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum PlayerCommand {
     LeftClick(LeftClick, Tile),
+    AutoAttack,
     //RunTo(Tile, Path),
 }
 #[derive(Debug)]
@@ -332,3 +334,24 @@ impl Health {
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Component)]
 pub struct Target(pub Option<Entity>);
+
+#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+pub enum Action {
+    AutoAttack,
+}
+
+#[derive(Default, Component)]
+pub struct CoolDowns {
+    pub auto_attack: u64,
+}
+
+impl CoolDowns {
+    pub fn cd_auto_attack(&mut self, tick: &Tick) -> bool {
+        if self.auto_attack <= tick.tick {
+            self.auto_attack += tick.tick + 24;
+            true
+        } else {
+            false
+        }
+    }
+}

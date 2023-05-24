@@ -4,16 +4,19 @@ use bevy::prelude::{
 use bevy_renet::renet::RenetServer;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{EntityType, LeftClick, PlayerCommand, Target},
+    components::{Action, EntityType, LeftClick, PlayerCommand, Target},
     ClickEvent,
 };
 
-use crate::{resources::ServerLobby, LeftClickEvent};
+use crate::{resources::ServerLobby, CombatEvent, LeftClickEvent};
 
 pub fn message(
     mut server: ResMut<RenetServer>,
     _item_query: Query<(Entity, &EntityType)>,
     mut left_click_event: EventWriter<LeftClickEvent>,
+    mut combat_event: EventWriter<CombatEvent>,
+    target_query: Query<&Target>,
+    lobby: Res<ServerLobby>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, ClientChannel::Command) {
@@ -26,6 +29,15 @@ pub fn message(
                         left_click,
                         tile,
                     });
+                }
+                PlayerCommand::AutoAttack => {
+                    if let Some(target) = lobby.clients.get(&client_id) {
+                        combat_event.send(CombatEvent::new(
+                            target.controlled_entity,
+                            Action::AutoAttack,
+                        ));
+                        println!("received autoattack")
+                    }
                 }
             }
         }

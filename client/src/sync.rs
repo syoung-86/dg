@@ -4,9 +4,10 @@ use bevy::{gltf::Gltf, prelude::*};
 use bevy_easings::*;
 use bevy_mod_picking::prelude::*;
 use bevy_renet::renet::RenetClient;
+use leafwing_input_manager::prelude::*;
 use lib::components::{
-    ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar, LeftClick, SpawnEvent,
-    Sword, Target, Tile, UpdateEvent, Wall,
+    Action, ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar, LeftClick,
+    SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall,
 };
 
 use crate::{assets::ManAssetPack, resources::NetworkMapping, PlayerBundle};
@@ -146,6 +147,10 @@ pub fn spawn(
                             ..Default::default()
                         },
                         PlayerBundle::new(&event.tile),
+                        InputManagerBundle::<Action> {
+                            action_state: ActionState::default(),
+                            input_map: InputMap::new([(KeyCode::Key2, Action::AutoAttack)]),
+                        },
                         player,
                         Health::new(50),
                     ));

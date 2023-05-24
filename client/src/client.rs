@@ -19,8 +19,8 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     components::{
-        DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand, Running,
-        SpawnEvent, TickEvent, Tile, UpdateEvent,
+        Action, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand, Running,
+        SpawnEvent, Target, TickEvent, Tile, UpdateEvent,
     },
     resources::Tick,
     ClickEvent,
@@ -58,7 +58,7 @@ fn main() {
         clear_events: false,
     });
 
-    app.add_plugin(InputManagerPlugin::<Move>::default());
+    app.add_plugin(InputManagerPlugin::<Action>::default());
     app.add_plugin(EasingsPlugin);
     app.add_plugins(DefaultPickingPlugins);
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
@@ -99,6 +99,7 @@ fn main() {
     app.add_system(update);
     app.add_system(setup_anims);
     app.add_system(open_door);
+    app.add_system(auto_attack);
     app.add_system(update_health_bar);
     app.add_system(client_send_player_commands);
     app.add_system(load_anims.run_if(should_load_anims));
@@ -114,6 +115,17 @@ fn main() {
     app.run();
 }
 
+pub fn auto_attack(
+    query: Query<&ActionState<Action>, (With<Player>, With<Target>)>,
+    mut player_command: EventWriter<PlayerCommand>,
+) {
+    if let Ok(action_state) = query.get_single() {
+        if action_state.just_pressed(Action::AutoAttack) {
+            println!("auto attack!");
+            player_command.send(PlayerCommand::AutoAttack);
+        }
+    }
+}
 pub fn open_door(mut query: Query<&mut Transform, (Added<Open>, With<Door>)>) {
     for mut transform in query.iter_mut() {
         transform.rotate_y(FRAC_PI_2);
