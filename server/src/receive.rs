@@ -4,7 +4,8 @@ use bevy::prelude::{
 use bevy_renet::renet::RenetServer;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{Action, EntityType, LeftClick, PlayerCommand, Target},
+    components::{Action, CoolDowns, EntityType, LeftClick, PlayerCommand, Target},
+    resources::Tick,
     ClickEvent,
 };
 
@@ -15,8 +16,9 @@ pub fn message(
     _item_query: Query<(Entity, &EntityType)>,
     mut left_click_event: EventWriter<LeftClickEvent>,
     mut combat_event: EventWriter<CombatEvent>,
-    target_query: Query<&Target>,
+    mut target_query: Query<(&Target, &mut CoolDowns)>,
     lobby: Res<ServerLobby>,
+    tick: Res<Tick>,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, ClientChannel::Command) {
@@ -33,10 +35,14 @@ pub fn message(
                 //CombatEvent using target: Entity, instead of Target(Entity)
                 PlayerCommand::AutoAttack => {
                     if let Some(client) = lobby.clients.get(&client_id) {
-                        if let Ok(target) = target_query.get(client.controlled_entity) {
-                            if let Some(target) = target.0 {
-                                combat_event.send(CombatEvent::new(target, Action::AutoAttack));
-                                println!("received autoattack")
+                        if let Ok((target, mut cooldowns)) =
+                            target_query.get_mut(client.controlled_entity)
+                        {
+                            if cooldowns.cd_auto_attack(&tick) {
+                                if let Some(target) = target.0 {
+                                    combat_event.send(CombatEvent::new(target, Action::AutoAttack));
+                                    println!("received autoattack")
+                                }
                             }
                         }
                     }

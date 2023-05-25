@@ -348,7 +348,7 @@ pub struct CoolDowns {
 impl CoolDowns {
     pub fn cd_auto_attack(&mut self, tick: &Tick) -> bool {
         if self.auto_attack <= tick.tick {
-            self.auto_attack += tick.tick + 24;
+            self.auto_attack = tick.tick + 24;
             true
         } else {
             false
