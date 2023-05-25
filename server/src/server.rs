@@ -73,7 +73,7 @@ fn main() {
             entered_left_scope,
             message,
             left_click,
-            //change_health,
+            combat_events,
             update_tile,
             update_health,
             update_target,
@@ -92,6 +92,21 @@ fn main() {
     app.run();
 }
 
+pub fn combat_events(mut query: Query<&mut Health>, mut combat_event: EventReader<CombatEvent>) {
+    for event in combat_event.iter() {
+        match event.action {
+            Action::AutoAttack => {
+                if let Ok(mut target_health) = query.get_mut(event.target) {
+                    if target_health.hp >= 10 {
+                        target_health.hp -= 10;
+                    } else {
+                        target_health.hp = 100;
+                    }
+                }
+            }
+        }
+    }
+}
 pub fn spawn_dummy(mut commands: Commands, mut spawn_event: EventWriter<SpawnEvent>) {
     let id = commands
         .spawn((

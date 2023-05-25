@@ -30,13 +30,15 @@ pub fn message(
                         tile,
                     });
                 }
+                //CombatEvent using target: Entity, instead of Target(Entity)
                 PlayerCommand::AutoAttack => {
-                    if let Some(target) = lobby.clients.get(&client_id) {
-                        combat_event.send(CombatEvent::new(
-                            target.controlled_entity,
-                            Action::AutoAttack,
-                        ));
-                        println!("received autoattack")
+                    if let Some(client) = lobby.clients.get(&client_id) {
+                        if let Ok(target) = target_query.get(client.controlled_entity) {
+                            if let Some(target) = target.0 {
+                                combat_event.send(CombatEvent::new(target, Action::AutoAttack));
+                                println!("received autoattack")
+                            }
+                        }
                     }
                 }
             }
