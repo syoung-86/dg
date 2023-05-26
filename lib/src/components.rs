@@ -148,6 +148,7 @@ pub enum ComponentType {
     Health(Health),
     Running(Running),
     Target(Target),
+    CombatState(CombatState),
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -335,7 +336,7 @@ impl Health {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Component)]
 pub struct Target(pub Option<Entity>);
 
-#[derive(Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
+#[derive(Reflect, Actionlike, PartialEq, Eq, Clone, Copy, Hash, Debug)]
 pub enum Action {
     AutoAttack,
 }
@@ -354,4 +355,10 @@ impl CoolDowns {
             false
         }
     }
+}
+
+#[derive(Eq, PartialEq, Copy, Clone, Serialize, Deserialize, Debug, Component)]
+pub enum CombatState {
+    Idle,
+    Punching(u64),
 }

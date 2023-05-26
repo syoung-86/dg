@@ -7,8 +7,8 @@ use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::ServerChannel,
     components::{
-        Action, Client, Dummy, EntityType, Health, LeftClick, Player, Scope, SpawnEvent, SyncEvent,
-        Tile,
+        Action, Client, CombatState, Dummy, EntityType, Health, LeftClick, Player, Scope,
+        SpawnEvent, SyncEvent, Tile,
     },
     resources::Tick,
     TickSet,
@@ -19,8 +19,8 @@ use resources::ServerLobby;
 use seldom_state::prelude::*;
 use send::spawn;
 use sync::{
-    create_scope, entered_left_scope, send_chunk, send_updates, update_health, update_target,
-    update_tile,
+    create_scope, entered_left_scope, send_chunk, send_updates, update_combat_state, update_health,
+    update_target, update_tile,
 };
 use world::create_tiles;
 
@@ -77,6 +77,7 @@ fn main() {
             update_tile,
             update_health,
             update_target,
+            update_combat_state,
             send_updates,
         )
             .chain()
@@ -92,11 +93,14 @@ fn main() {
     app.run();
 }
 
-pub fn combat_events(mut query: Query<&mut Health>, mut combat_event: EventReader<CombatEvent>) {
+pub fn combat_events(
+    mut query: Query<(Entity, &mut Health)>,
+    mut combat_event: EventReader<CombatEvent>,
+) {
     for event in combat_event.iter() {
         match event.action {
             Action::AutoAttack => {
-                if let Ok(mut target_health) = query.get_mut(event.target) {
+                if let Ok((e, mut target_health)) = query.get_mut(event.target) {
                     if target_health.hp >= 10 {
                         target_health.hp -= 10;
                     } else {

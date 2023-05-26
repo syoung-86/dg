@@ -9,7 +9,7 @@ use bevy_mod_picking::prelude::*;
 use input::PickingEvent;
 use player::{setup_anims, update_health_bar};
 use seldom_state::prelude::*;
-use std::{f32::consts::FRAC_PI_2, time::Duration};
+use std::{any::type_name, f32::consts::FRAC_PI_2, time::Duration};
 use sync::{spawn, update};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
@@ -116,7 +116,8 @@ fn main() {
 }
 
 pub fn auto_attack(
-    query: Query<&ActionState<Action>, (With<Player>, With<Target>)>,
+    //query: Query<&ActionState<Action>, (With<Player>, With<Target>)>,
+    query: Query<&ActionState<Action>>,
     mut player_command: EventWriter<PlayerCommand>,
 ) {
     if let Ok(action_state) = query.get_single() {
@@ -132,6 +133,62 @@ pub fn open_door(mut query: Query<&mut Transform, (Added<Open>, With<Door>)>) {
     }
 }
 
+#[derive(Default, Clone, Copy, Component, Reflect)]
+#[reflect(Component)]
+pub struct Punching;
+
+//impl Trigger for Punching {
+//type Ok = f32;
+//type Err = f32;
+//type Param<'w, 's> = (
+//Query<'w, 's, &'static ActionState<Action>>,
+//EventWriter<'w, PlayerCommand>,
+//);
+//fn trigger(
+//&self,
+//entity: Entity,
+//(query, mut player_command): &(
+//Query<'_, '_, &'static ActionState<Action>>,
+//EventWriter<'_, PlayerCommand>,
+//),
+//) -> Result<f32, f32> {
+//if let Ok(action_state) = query.get_single() {
+//if action_state.just_pressed(Action::AutoAttack) {
+//println!("auto attack!");
+//player_command.send(PlayerCommand::AutoAttack);
+//return Ok(1.0);
+//}
+//}
+//Err(0.0)
+//}
+//}
+#[derive(Debug, Deref, DerefMut, Reflect)]
+pub struct JustPressedTrigger<A: Actionlike>(pub A);
+
+impl<A: Actionlike + Reflect> BoolTrigger for JustPressedTrigger<A> {
+    type Param<'w, 's> = Query<'w, 's, &'static ActionState<A>>;
+
+    fn trigger(
+        &self,
+        entity: Entity,
+        actors: &bevy::prelude::Query<
+            '_,
+            '_,
+            &'static leafwing_input_manager::action_state::ActionState<A>,
+        >,
+    ) -> bool {
+        let Self(action) = self;
+        actors
+            .get(entity)
+            .unwrap_or_else(|_| {
+                panic!(
+                    "entity {entity:?} with `JustPressedTrigger<{0}>` is missing `ActionState<{0}>`",
+                    type_name::<A>()
+                )
+            })
+            .just_pressed(action.clone())
+    }
+}
 #[derive(Clone, Copy, FromReflect, Reflect)]
 pub struct Moving;
 
@@ -179,7 +236,9 @@ impl PlayerBundle {
                 .remove_on_exit::<Running, Running>()
                 .trans::<Running>(NotTrigger(Moving), Idle)
                 .insert_on_enter::<Idle>(Idle)
-                .remove_on_exit::<Idle, Idle>(),
+                .remove_on_exit::<Idle, Idle>(), //.trans::<Idle>(JustPressedTrigger(Action::AutoAttack), Punching)
+                                                 //.insert_on_enter::<Punching>(Punching)
+                                                 //.remove_on_exit::<Punching, Punching>()
         }
     }
 }

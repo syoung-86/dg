@@ -6,8 +6,8 @@ use bevy_mod_picking::prelude::*;
 use bevy_renet::renet::RenetClient;
 use leafwing_input_manager::prelude::*;
 use lib::components::{
-    Action, ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar, LeftClick,
-    SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall,
+    Action, CombatState, ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar,
+    LeftClick, SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall,
 };
 
 use crate::{assets::ManAssetPack, resources::NetworkMapping, PlayerBundle};
@@ -94,6 +94,10 @@ pub fn update(
             ComponentType::Running(c) => {
                 commands.entity(event.entity).insert(c);
             }
+
+            ComponentType::CombatState(c) => {
+                commands.entity(event.entity).insert(c);
+            }
             ComponentType::Target(c) => {
                 if let Some(client_entity) = c.0 {
                     if let Some(client_entity) = network_mapping.server.get(&client_entity) {
@@ -147,12 +151,9 @@ pub fn spawn(
                             ..Default::default()
                         },
                         PlayerBundle::new(&event.tile),
-                        InputManagerBundle::<Action> {
-                            action_state: ActionState::default(),
-                            input_map: InputMap::new([(KeyCode::Key2, Action::AutoAttack)]),
-                        },
                         player,
                         Health::new(50),
+                        CombatState::Idle,
                     ));
                     let mut transform = Transform::from_xyz(0., 3., 0.);
                     transform.rotate_z(FRAC_PI_2);
@@ -163,7 +164,13 @@ pub fn spawn(
 
                 println!("spawn player: {:?}", player);
                 if player.id == client.client_id() {
-                    commands.entity(event.entity).insert(ControlledEntity);
+                    commands.entity(event.entity).insert((
+                        ControlledEntity,
+                        InputManagerBundle::<Action> {
+                            action_state: ActionState::default(),
+                            input_map: InputMap::new([(KeyCode::Key2, Action::AutoAttack)]),
+                        },
+                    ));
                 }
 
                 commands.spawn(PointLightBundle {

@@ -2,7 +2,7 @@ use bevy::{prelude::*, utils::HashSet};
 use bevy_renet::renet::{
     RenetConnectionConfig, RenetServer, ServerAuthentication, ServerConfig, ServerEvent,
 };
-use lib::components::{Client, CoolDowns, EntityType, Health, ServerMessages, SpawnEvent, Target};
+use lib::components::{Client, CoolDowns, EntityType, Health, ServerMessages, SpawnEvent, Target, CombatState};
 use lib::PROTOCOL_ID;
 use lib::{
     channels::{ClientChannel, ServerChannel},
@@ -67,6 +67,7 @@ pub fn client_handler(
                         Target(None),
                         Health { hp: 50 },
                         CoolDowns::default(),
+                        CombatState::Idle,
                     ))
                     .id();
                 let new_client = Client {

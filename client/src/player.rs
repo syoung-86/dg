@@ -1,9 +1,12 @@
 use std::f32::consts::FRAC_PI_2;
 
 use bevy::prelude::*;
-use lib::components::{Health, HealthBar, Running, Target};
+use lib::{
+    components::{CombatState, Health, HealthBar, Running, Target},
+    resources::Tick,
+};
 
-use crate::Animations;
+use crate::{Animations, Punching};
 
 pub fn update_health_bar(
     bar: Query<Entity, With<HealthBar>>,
@@ -39,24 +42,40 @@ pub fn setup_anims(
     animations: Res<Animations>,
     mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
     player_parent: Query<(Entity, &Parent, &Children)>,
-    state: Query<(Entity, Option<&Running>, Option<&Target>)>,
+    state: Query<(Entity, Option<&Running>, &CombatState)>,
+    tick: Res<Tick>,
+    mut commands: Commands,
 ) {
     for (parent, mut player) in animation_players.iter_mut() {
         let player_parent_get = parent.get();
         for (player_parent_entity, parent_player_parent, _) in player_parent.iter() {
             if player_parent_get == player_parent_entity {
                 let entity_animate = parent_player_parent.get();
-                for (e, running, _target) in state.iter() {
+                for (e, running, combat_state) in state.iter() {
                     if entity_animate == e {
                         //if target.is_some() {
-                        //player.play(animations.0[7].clone_weak()).repeat();
-                        //break;
                         //}
-                        if running.is_some() {
-                            player.play(animations.0[9].clone_weak()).repeat();
-                        } else {
-                            player.play(animations.0[3].clone_weak()).repeat();
+                        //println!("combat_state: {:?}", combat_state);
+                        match combat_state {
+                            CombatState::Punching(end_tick) => {
+                                if *end_tick >= tick.tick {
+                                    player.play(animations.0[7].clone_weak());
+                                    //println!("Punching");
+                                } else {
+                                    commands.entity(e).insert(CombatState::Idle);
+                                    println!("inserted idle");
+                                }
+                                //continue;
+                            }
+                            CombatState::Idle => {
+                                if running.is_some() {
+                                    player.play(animations.0[9].clone_weak()).repeat();
+                                } else {
+                                    player.play(animations.0[3].clone_weak()).repeat();
+                                }
+                            }
                         }
+                        //}
                     }
                 }
             }

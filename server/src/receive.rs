@@ -4,7 +4,7 @@ use bevy::prelude::{
 use bevy_renet::renet::RenetServer;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{Action, CoolDowns, EntityType, LeftClick, PlayerCommand, Target},
+    components::{Action, CombatState, CoolDowns, EntityType, LeftClick, PlayerCommand, Target},
     resources::Tick,
     ClickEvent,
 };
@@ -19,6 +19,7 @@ pub fn message(
     mut target_query: Query<(&Target, &mut CoolDowns)>,
     lobby: Res<ServerLobby>,
     tick: Res<Tick>,
+    mut commands: Commands,
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, ClientChannel::Command) {
@@ -40,6 +41,9 @@ pub fn message(
                         {
                             if cooldowns.cd_auto_attack(&tick) {
                                 if let Some(target) = target.0 {
+                                    commands
+                                        .entity(client.controlled_entity)
+                                        .insert(CombatState::Punching(tick.tick + 5));
                                     combat_event.send(CombatEvent::new(target, Action::AutoAttack));
                                     println!("received autoattack")
                                 }

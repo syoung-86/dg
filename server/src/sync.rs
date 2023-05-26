@@ -4,7 +4,7 @@ use lib::{
     channels::ServerChannel,
     components::{
         Client, ComponentType, Dummy, EntityType, Health, Player, Scope, SpawnEvent, SyncEvent,
-        Target, Tile, UpdateEvent,
+        Target, Tile, UpdateEvent, CombatState,
     },
 };
 
@@ -24,7 +24,7 @@ macro_rules! update_component {
                             entity,
                             component: ComponentType::$type_name(*component),
                         };
-                        println!("sync event: {:?}", event);
+                        //println!("sync event: {:?}", event);
                         update_event.send(SyncEvent::Update(client.id, event));
                     }
                 }
@@ -32,9 +32,15 @@ macro_rules! update_component {
         }
     };
 }
+//dont forget to add system to App
+//add to component type enum
+//add macro call
+//add system
+//add match arm on client
 update_component!(update_health, Health);
 update_component!(update_tile, Tile);
 update_component!(update_target, Target);
+update_component!(update_combat_state, CombatState);
 
 pub fn send_chunk(
     query: Query<(Entity, &EntityType, &Tile)>,
