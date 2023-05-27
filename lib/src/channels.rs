@@ -53,6 +53,7 @@ pub enum ServerChannel {
     ServerMessages,
     Tick,
     Test,
+    ServerEvents,
 }
 
 impl From<ServerChannel> for u8 {
@@ -65,6 +66,7 @@ impl From<ServerChannel> for u8 {
             ServerChannel::ServerMessages => 4,
             ServerChannel::Tick => 5,
             ServerChannel::Test => 6,
+            ServerChannel::ServeEvents => 7,
         }
     }
 }
@@ -88,11 +90,10 @@ impl ServerChannel {
             UnreliableChannelConfig {
                 channel_id: Self::Update.into(),
                 sequenced: false,
-                ..Default::default()
-            //ReliableChannelConfig {
-                //channel_id: Self::Update.into(),
-                //message_resend_time: Duration::from_millis(200),
-                //..Default::default()
+                ..Default::default() //ReliableChannelConfig {
+                                     //channel_id: Self::Update.into(),
+                                     //message_resend_time: Duration::from_millis(200),
+                                     //..Default::default()
             }
             .into(),
             ChunkChannelConfig {
@@ -109,6 +110,12 @@ impl ServerChannel {
             UnreliableChannelConfig {
                 channel_id: Self::Tick.into(),
                 sequenced: true,
+                ..Default::default()
+            }
+            .into(),
+            ReliableChannelConfig {
+                channel_id: Self::Test.into(),
+                message_resend_time: Duration::from_millis(200),
                 ..Default::default()
             }
             .into(),

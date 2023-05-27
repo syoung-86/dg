@@ -3,13 +3,41 @@ use bevy_renet::renet::RenetServer;
 use lib::{
     channels::ServerChannel,
     components::{
-        Client, ComponentType, Dummy, EntityType, Health, Player, Scope, SpawnEvent, SyncEvent,
-        Target, Tile, UpdateEvent, CombatState,
-    },
+        Client, CombatState, ComponentType, Dummy, EntityType, Health, Player, Scope, SpawnEvent,
+        SyncEvent, Target, Tile, UpdateEvent,
+    }, OpenEvent, ServerEvents,
 };
 
 use crate::events::ChunkRequest;
 
+/// the server event needs to have a entity field for scoped checking
+/// add macro,
+/// add event to server.App
+/// add event to Client.App
+/// Have client receive in ServerChannel::ServerEvents and send off
+/// the inner event
+macro_rules! new_server_event{
+
+    ($fn_name:ident, $type_name:ident) => {
+        pub fn $fn_name(mut events: EventReader<$type_name>,
+            mut server: ResMut<RenetServer>,
+            clients: Query<&Client>,
+        ) {
+            for event in events.iter(){
+            for client in clients.iter(){
+                if client.scoped_entities.contains(&event.entity) {
+                    let message = bincode::serialize(&[ServerEvents::$type_name(*event)]).unwrap();
+                    server.send_message(client.id, ServerChannel::ServerEvents, message);
+                }
+            }
+
+            }
+
+        }
+    }
+}
+
+new_server_event!(send_open_event, OpenEvent);
 macro_rules! update_component {
     ($fn_name:ident, $type_name:ident) => {
         pub fn $fn_name(

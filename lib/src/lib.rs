@@ -26,8 +26,24 @@ pub struct ClickEvent {
 }
 
 impl ClickEvent {
-    pub fn new(target: Entity, left_click: LeftClick, destination: Tile) -> Self { Self { target, left_click, destination } }
+    pub fn new(target: Entity, left_click: LeftClick, destination: Tile) -> Self {
+        Self {
+            target,
+            left_click,
+            destination,
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct UpdateComponentEvent<C: Component>(pub Entity, pub C);
+
+#[derive(Copy, Clone, Serialize, Deserialize)]
+pub struct OpenEvent {
+    pub entity: Entity,
+}
+
+#[derive(Serialize, Deserialize)]
+pub enum ServerEvents {
+    OpenEvent(OpenEvent),
+}
