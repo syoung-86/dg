@@ -118,6 +118,8 @@ impl Path {
         }
     }
 }
+#[derive(Copy, Clone,Component, Serialize, Deserialize, Debug)]
+pub struct Untraversable;
 #[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Component)]
 pub enum EntityType {
     Tile,

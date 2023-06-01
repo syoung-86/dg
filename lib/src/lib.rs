@@ -35,9 +35,6 @@ impl ClickEvent {
     }
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct UpdateComponentEvent<C: Component>(pub Entity, pub C);
-
 #[derive(Copy, Clone, Serialize, Deserialize)]
 pub struct OpenEvent {
     pub entity: Entity,
@@ -47,3 +44,4 @@ pub struct OpenEvent {
 pub enum ServerEvents {
     OpenEvent(OpenEvent),
 }
+

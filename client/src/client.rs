@@ -19,8 +19,9 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     components::{
-        Action, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand, Running,
-        SpawnEvent, Target, TickEvent, Tile, UpdateEvent,
+        Action, ControlledEntity, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player,
+        PlayerCommand, Running, SpawnEvent, Target, TickEvent, Tile, Untraversable, UpdateEvent,
+        Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -100,6 +101,7 @@ fn main() {
     app.add_system(setup_anims);
     app.add_system(open_door);
     app.add_system(auto_attack);
+    app.add_system(update_trav);
     app.add_system(update_health_bar);
     app.add_system(client_send_player_commands);
     app.add_system(load_anims.run_if(should_load_anims));
@@ -114,7 +116,20 @@ fn main() {
     app.register_type::<Health>();
     app.run();
 }
-
+// this inserts untrav twice for some reason
+pub fn update_trav(
+    walls: Query<&Tile, With<Wall>>,
+    tiles: Query<(Entity, &Tile), Without<Untraversable>>,
+    mut commands: Commands,
+) {
+    for (e, tile) in tiles.iter() {
+        for wall in walls.iter() {
+            if tile.cell == wall.cell {
+                commands.entity(e).insert(Untraversable);
+            }
+        }
+    }
+}
 pub fn auto_attack(
     //query: Query<&ActionState<Action>, (With<Player>, With<Target>)>,
     query: Query<&ActionState<Action>>,

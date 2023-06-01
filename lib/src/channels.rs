@@ -66,7 +66,7 @@ impl From<ServerChannel> for u8 {
             ServerChannel::ServerMessages => 4,
             ServerChannel::Tick => 5,
             ServerChannel::Test => 6,
-            ServerChannel::ServeEvents => 7,
+            ServerChannel::ServerEvents => 7,
         }
     }
 }
@@ -120,7 +120,7 @@ impl ServerChannel {
             }
             .into(),
             ReliableChannelConfig {
-                channel_id: Self::Test.into(),
+                channel_id: Self::ServerEvents.into(),
                 message_resend_time: Duration::from_millis(200),
                 ..Default::default()
             }

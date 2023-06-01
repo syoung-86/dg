@@ -4,8 +4,9 @@ use lib::{
     channels::ServerChannel,
     components::{
         Client, CombatState, ComponentType, Dummy, EntityType, Health, Player, Scope, SpawnEvent,
-        SyncEvent, Target, Tile, UpdateEvent,
-    }, OpenEvent, ServerEvents,
+        SyncEvent, Target, Tile, Untraversable, UpdateEvent,
+    },
+    OpenEvent, ServerEvents,
 };
 
 use crate::events::ChunkRequest;
@@ -16,25 +17,24 @@ use crate::events::ChunkRequest;
 /// add event to Client.App
 /// Have client receive in ServerChannel::ServerEvents and send off
 /// the inner event
-macro_rules! new_server_event{
-
+macro_rules! new_server_event {
     ($fn_name:ident, $type_name:ident) => {
-        pub fn $fn_name(mut events: EventReader<$type_name>,
+        pub fn $fn_name(
+            mut events: EventReader<$type_name>,
             mut server: ResMut<RenetServer>,
             clients: Query<&Client>,
         ) {
-            for event in events.iter(){
-            for client in clients.iter(){
-                if client.scoped_entities.contains(&event.entity) {
-                    let message = bincode::serialize(&[ServerEvents::$type_name(*event)]).unwrap();
-                    server.send_message(client.id, ServerChannel::ServerEvents, message);
+            for event in events.iter() {
+                for client in clients.iter() {
+                    if client.scoped_entities.contains(&event.entity) {
+                        let message =
+                            bincode::serialize(&[ServerEvents::$type_name(*event)]).unwrap();
+                        server.send_message(client.id, ServerChannel::ServerEvents, message);
+                    }
                 }
             }
-
-            }
-
         }
-    }
+    };
 }
 
 new_server_event!(send_open_event, OpenEvent);
@@ -52,7 +52,7 @@ macro_rules! update_component {
                             entity,
                             component: ComponentType::$type_name(*component),
                         };
-                        //println!("sync event: {:?}", event);
+                        println!("sync event: {:?}", event);
                         update_event.send(SyncEvent::Update(client.id, event));
                     }
                 }
@@ -105,7 +105,10 @@ pub fn create_scope(
         }
     }
 }
-
+/// creat a copy off all the update_component macros that don't check Added<_>
+/// and send update messages if in scope
+/// create  a list of entities from SpawnEvent then use that to sync everything??
+/// then add a second function to the update macro's that read a SyncEvent or whatever
 pub fn entered_left_scope(
     mut clients: Query<&mut Client>,
     entities: Query<(Entity, &Tile, &EntityType)>,

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use lib::components::{EntityType, Instance, Tile};
+use lib::components::{EntityType, Instance, Tile, Wall};
 
 pub fn create_tiles(mut commands: Commands) {
     let instance = commands.spawn(Instance).id();
@@ -11,6 +11,9 @@ pub fn create_tiles(mut commands: Commands) {
                 commands.entity(instance).push_children(&[child]);
             }
         }
+    }
+    for z in 4..10 {
+        commands.spawn((EntityType::Wall(Wall::Vertical), Tile::new((4, 0, z))));
     }
 }
 

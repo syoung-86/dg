@@ -7,7 +7,7 @@ use bevy_renet::renet::RenetClient;
 use leafwing_input_manager::prelude::*;
 use lib::components::{
     Action, CombatState, ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar,
-    LeftClick, SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall,
+    LeftClick, SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall, Untraversable,
 };
 
 use crate::{assets::ManAssetPack, resources::NetworkMapping, PlayerBundle};

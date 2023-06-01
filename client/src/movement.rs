@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_renet::renet::RenetClient;
 use lib::{
     channels::ClientChannel,
-    components::{ControlledEntity, LeftClick, Path, PlayerCommand, Tile},
+    components::{ControlledEntity, Direction, LeftClick, Path, PlayerCommand, Tile},
     resources::Tick,
     ClickEvent,
 };
@@ -29,6 +29,71 @@ pub fn get_path(
     }
 }
 
+pub fn step(mut path: &mut Path) {
+    let mut direction = Direction::Bad;
+    if path.origin.cell.0 < path.destination.cell.0 && path.origin.cell.2 == path.destination.cell.2
+    {
+        direction = Direction::North;
+    }
+
+    if path.origin.cell.0 > path.destination.cell.0 && path.origin.cell.2 == path.destination.cell.2
+    {
+        direction = Direction::South;
+    }
+
+    if path.origin.cell.0 == path.destination.cell.0 && path.origin.cell.2 > path.destination.cell.2
+    {
+        direction = Direction::West;
+    }
+    if path.origin.cell.0 == path.destination.cell.0 && path.origin.cell.2 < path.destination.cell.2
+    {
+        direction = Direction::East;
+    }
+
+    if path.origin.cell.0 < path.destination.cell.0 && path.origin.cell.2 < path.destination.cell.2
+    {
+        direction = Direction::NorthEast;
+    }
+
+    if path.origin.cell.0 < path.destination.cell.0 && path.origin.cell.2 > path.destination.cell.2
+    {
+        direction = Direction::NorthWest;
+    }
+
+    if path.origin.cell.0 > path.destination.cell.0 && path.origin.cell.2 > path.destination.cell.2
+    {
+        direction = Direction::SouthWest;
+    }
+
+    if path.origin.cell.0 > path.destination.cell.0 && path.origin.cell.2 < path.destination.cell.2
+    {
+        direction = Direction::SouthEast;
+    }
+    //println!("Direction: {:?}", direction);
+    match direction {
+        Direction::North => path.origin.cell.0 += 1,
+        Direction::East => path.origin.cell.2 += 1,
+        Direction::South => path.origin.cell.0 -= 1,
+        Direction::West => path.origin.cell.2 -= 1,
+        Direction::NorthEast => {
+            path.origin.cell.0 += 1;
+            path.origin.cell.2 += 1
+        }
+        Direction::SouthEast => {
+            path.origin.cell.0 -= 1;
+            path.origin.cell.2 += 1
+        }
+        Direction::SouthWest => {
+            path.origin.cell.0 -= 1;
+            path.origin.cell.2 -= 1
+        }
+        Direction::NorthWest => {
+            path.origin.cell.0 += 1;
+            path.origin.cell.2 -= 1
+        }
+        Direction::Bad => (),
+    }
+}
 #[derive(Clone, Eq, PartialEq, Debug, Component, Default)]
 pub struct PathMap {
     pub steps: Vec<(Tick, LeftClick, Tile)>,
