@@ -36,7 +36,7 @@ pub struct HealthBar;
 #[derive(Serialize, Deserialize, Debug, Copy, Clone, Component, Reflect)]
 #[component(storage = "SparseSet")]
 pub struct Running;
-#[derive(Default, Debug, Serialize, Deserialize, Component)]
+#[derive(Clone, Copy, Default, Debug, Serialize, Deserialize, Component)]
 pub struct Path {
     pub destination: Tile,
     pub origin: Tile,
@@ -118,7 +118,7 @@ impl Path {
         }
     }
 }
-#[derive(Copy, Clone,Component, Serialize, Deserialize, Debug)]
+#[derive(Copy, Clone, Component, Serialize, Deserialize, Debug)]
 pub struct Untraversable;
 #[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Component)]
 pub enum EntityType {
@@ -167,7 +167,18 @@ pub struct Client {
     pub controlled_entity: Entity,
 }
 #[derive(
-    Reflect, Eq, PartialEq, Debug, Serialize, Deserialize, Component, Default, Copy, Clone,
+    Reflect,
+    Eq,
+    PartialEq,
+    Debug,
+    Serialize,
+    Deserialize,
+    Component,
+    Default,
+    Copy,
+    Clone,
+    PartialOrd,
+    Hash,
 )]
 #[reflect(Component)]
 pub struct Tile {
@@ -364,3 +375,6 @@ pub enum CombatState {
     Idle,
     Punching(u64),
 }
+
+#[derive(Component)]
+pub struct FloorTile;

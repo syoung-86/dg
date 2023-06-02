@@ -7,7 +7,7 @@ use bevy_renet::renet::RenetClient;
 use leafwing_input_manager::prelude::*;
 use lib::components::{
     Action, CombatState, ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar,
-    LeftClick, SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall, Untraversable,
+    LeftClick, SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall, Untraversable, FloorTile,
 };
 
 use crate::{assets::ManAssetPack, resources::NetworkMapping, PlayerBundle};
@@ -137,6 +137,7 @@ pub fn spawn(
                     //RaycastPickTarget::default(),
                     //NoDeselect,
                     LeftClick::Walk,
+                    FloorTile,
                 ));
                 //.forward_events::<PointerDown, PickingEvent>()
             }

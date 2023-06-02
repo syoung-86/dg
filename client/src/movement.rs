@@ -22,6 +22,7 @@ pub fn get_path(
                 origin: *origin,
                 left_click: event.left_click,
             };
+            commands.entity(entity).insert(path);
             let path_map = create_path(path, mut_tick);
             //println!("path_map: {:?}", path_map);
             commands.entity(entity).insert(path_map);
