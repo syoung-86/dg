@@ -12,175 +12,22 @@ pub fn get_path(
     mut commands: Commands,
     mut walk_event: EventReader<ClickEvent>,
     query: Query<(Entity, &Tile), With<ControlledEntity>>,
-    tick: Res<Tick>,
 ) {
     for event in walk_event.iter() {
         if let Ok((entity, origin)) = query.get_single() {
-            let mut_tick = Tick { tick: tick.tick };
             let path = Path {
                 destination: event.destination,
                 origin: *origin,
                 left_click: event.left_click,
             };
             commands.entity(entity).insert(path);
-            let path_map = create_path(path, mut_tick);
-            //println!("path_map: {:?}", path_map);
-            commands.entity(entity).insert(path_map);
         }
     }
 }
 
-pub fn step(mut path: &mut Path) {
-    let mut direction = Direction::Bad;
-    if path.origin.cell.0 < path.destination.cell.0 && path.origin.cell.2 == path.destination.cell.2
-    {
-        direction = Direction::North;
-    }
-
-    if path.origin.cell.0 > path.destination.cell.0 && path.origin.cell.2 == path.destination.cell.2
-    {
-        direction = Direction::South;
-    }
-
-    if path.origin.cell.0 == path.destination.cell.0 && path.origin.cell.2 > path.destination.cell.2
-    {
-        direction = Direction::West;
-    }
-    if path.origin.cell.0 == path.destination.cell.0 && path.origin.cell.2 < path.destination.cell.2
-    {
-        direction = Direction::East;
-    }
-
-    if path.origin.cell.0 < path.destination.cell.0 && path.origin.cell.2 < path.destination.cell.2
-    {
-        direction = Direction::NorthEast;
-    }
-
-    if path.origin.cell.0 < path.destination.cell.0 && path.origin.cell.2 > path.destination.cell.2
-    {
-        direction = Direction::NorthWest;
-    }
-
-    if path.origin.cell.0 > path.destination.cell.0 && path.origin.cell.2 > path.destination.cell.2
-    {
-        direction = Direction::SouthWest;
-    }
-
-    if path.origin.cell.0 > path.destination.cell.0 && path.origin.cell.2 < path.destination.cell.2
-    {
-        direction = Direction::SouthEast;
-    }
-    //println!("Direction: {:?}", direction);
-    match direction {
-        Direction::North => path.origin.cell.0 += 1,
-        Direction::East => path.origin.cell.2 += 1,
-        Direction::South => path.origin.cell.0 -= 1,
-        Direction::West => path.origin.cell.2 -= 1,
-        Direction::NorthEast => {
-            path.origin.cell.0 += 1;
-            path.origin.cell.2 += 1
-        }
-        Direction::SouthEast => {
-            path.origin.cell.0 -= 1;
-            path.origin.cell.2 += 1
-        }
-        Direction::SouthWest => {
-            path.origin.cell.0 -= 1;
-            path.origin.cell.2 -= 1
-        }
-        Direction::NorthWest => {
-            path.origin.cell.0 += 1;
-            path.origin.cell.2 -= 1
-        }
-        Direction::Bad => (),
-    }
-}
 #[derive(Clone, Eq, PartialEq, Debug, Component, Default)]
 pub struct PathMap {
     pub steps: Vec<(Tick, LeftClick, Tile)>,
-}
-pub fn create_path(mut path: Path, client_tick: Tick) -> PathMap {
-    let mut path_map: PathMap = PathMap::default();
-    let mut step_tick = client_tick;
-    while path.origin.cell != path.destination.cell {
-        step_tick.tick += 2;
-        path.step();
-        match path.left_click {
-            LeftClick::Walk => {
-                path_map.steps.push((
-                    step_tick,
-                    path.left_click,
-                    Tile {
-                        cell: path.origin.cell,
-                    },
-                ));
-            }
-            LeftClick::Pickup(Some(_)) => {
-                if path.origin.cell.1 == path.destination.cell.1 {
-                    path_map.steps.push((
-                        step_tick,
-                        path.left_click,
-                        Tile {
-                            cell: path.origin.cell,
-                        },
-                    ));
-                } else {
-                    path_map.steps.push((
-                        step_tick,
-                        LeftClick::Walk,
-                        Tile {
-                            cell: path.origin.cell,
-                        },
-                    ));
-                }
-            }
-            LeftClick::Pull => {
-                if path.origin.cell.0 != path.destination.cell.0
-                    || path.origin.cell.2 != path.destination.cell.2
-                {
-                    path_map.steps.push((
-                        step_tick,
-                        LeftClick::Walk,
-                        Tile {
-                            cell: path.origin.cell,
-                        },
-                    ));
-                } else {
-                    path_map.steps.push((
-                        step_tick,
-                        LeftClick::Pull,
-                        Tile {
-                            cell: path.origin.cell,
-                        },
-                    ));
-                }
-            }
-
-            LeftClick::Attack(e) => {
-                if path.origin.cell.0 != path.destination.cell.0
-                    || path.origin.cell.2 != path.destination.cell.2
-                {
-                    path_map.steps.push((
-                        step_tick,
-                        LeftClick::Walk,
-                        Tile {
-                            cell: path.origin.cell,
-                        },
-                    ));
-                } else {
-                    path_map.steps.push((
-                        step_tick,
-                        LeftClick::Attack(e),
-                        Tile {
-                            cell: path.origin.cell,
-                        },
-                    ));
-                }
-            }
-            _ => (),
-        }
-    }
-    path_map
 }
 pub fn scheduled_movement(
     mut query: Query<&mut PathMap>,

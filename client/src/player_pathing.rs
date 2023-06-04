@@ -1,8 +1,12 @@
 use bevy::prelude::*;
-use lib::components::{FloorTile, Path, Tile, Untraversable};
-use std::hash::Hash;
+use lib::{
+    components::{ControlledEntity, FloorTile, LeftClick, Path, Tile, Untraversable},
+    resources::Tick,
+};
 use pathfinding::prelude::astar;
+use std::hash::Hash;
 
+use crate::movement::PathMap;
 
 #[derive(Eq, PartialEq, Hash, Clone)]
 struct Nodes {
@@ -55,11 +59,9 @@ impl Nodes {
             }
         }
         //neighbours.iter().map(move |&n| n)
-        println!("neighbours: {:?}", neighbours.len());
         neighbours.into_iter()
     }
     fn heuristic(&self, pos: &Tile) -> u32 {
-        println!("heuristic");
         let dx = pos.cell.0.abs_diff(self.start.cell.0);
         let dz = pos.cell.2.abs_diff(self.start.cell.2);
         let g_cost = dx + dz;
@@ -82,6 +84,9 @@ impl Nodes {
 pub fn find_path(
     path_query: Query<&Path, Changed<Path>>,
     tiles: Query<&Tile, (With<FloorTile>, Without<Untraversable>)>,
+    tick: Res<Tick>,
+    player: Query<Entity, With<ControlledEntity>>,
+    mut commands: Commands,
 ) {
     if let Ok(path_info) = path_query.get_single() {
         let nodes: Nodes = Nodes {
@@ -90,81 +95,24 @@ pub fn find_path(
             goal: path_info.destination,
         };
 
-        let path = astar(
+        if let Some(path) = astar(
             &nodes.start,
             |current_node| nodes.successors(current_node),
             |pos| nodes.heuristic(pos),
             |node| nodes.success(node),
-        );
-        println!("path: {:?}", path);
+        ) {
+            let mut path_map: PathMap = PathMap::default();
+            let mut step_tick = tick.clone();
+            for step in path.0 {
+                step_tick.tick += 1;
+                path_map.steps.push((step_tick, LeftClick::Walk, step));
+            }
+            if let Some(last) = path_map.steps.last_mut() {
+                last.1 = path_info.left_click;
+            }
+            if let Ok(player_entity) = player.get_single() {
+                commands.entity(player_entity).insert(path_map);
+            }
+        }
     }
 }
-
-//#[allow(clippy::missing_panics_doc)]
-//pub fn astar<N, C, FN, IN, FH, FS>(
-    //start: &N,
-    //mut successors: FN,
-    //mut heuristic: FH,
-    //mut success: FS,
-//) -> Option<(Vec<N>, C)>
-//where
-    //N: Eq + Hash + Clone,
-    //C: Zero + Ord + Copy,
-    //FN: FnMut(&N) -> IN,
-    //IN: IntoIterator<Item = (N, C)>,
-    //FH: FnMut(&N) -> C,
-    //FS: FnMut(&N) -> bool,
-//{
-    //let mut to_see = BinaryHeap::new();
-    //to_see.push(SmallestCostHolder {
-        //estimated_cost: Zero::zero(),
-        //cost: Zero::zero(),
-        //index: 0,
-    //});
-    //let mut parents: FxIndexMap<N, (usize, C)> = FxIndexMap::default();
-    //parents.insert(start.clone(), (usize::max_value(), Zero::zero()));
-    //while let Some(SmallestCostHolder { cost, index, .. }) = to_see.pop() {
-        //let successors = {
-            //let (node, &(_, c)) = parents.get_index(index).unwrap(); // Cannot fail
-            //if success(node) {
-                //let path = reverse_path(&parents, |&(p, _)| p, index);
-                //return Some((path, cost));
-            //}
-            //// We may have inserted a node several time into the binary heap if we found
-            //// a better way to access it. Ensure that we are currently dealing with the
-            //// best path and discard the others.
-            //if cost > c {
-                //continue;
-            //}
-            //successors(node)
-        //};
-        //for (successor, move_cost) in successors {
-            //let new_cost = cost + move_cost;
-            //let h; // heuristic(&successor)
-            //let n; // index for successor
-            //match parents.entry(successor) {
-                //Vacant(e) => {
-                    //h = heuristic(e.key());
-                    //n = e.index();
-                    //e.insert((index, new_cost));
-                //}
-                //Occupied(mut e) => {
-                    //if e.get().1 > new_cost {
-                        //h = heuristic(e.key());
-                        //n = e.index();
-                        //e.insert((index, new_cost));
-                    //} else {
-                        //continue;
-                    //}
-                //}
-            //}
-
-            //to_see.push(SmallestCostHolder {
-                //estimated_cost: new_cost + h,
-                //cost: new_cost,
-                //index: n,
-            //});
-        //}
-    //}
-    //None
-//}
