@@ -7,7 +7,7 @@ use bevy::{
 use bevy_easings::*;
 use bevy_mod_picking::prelude::*;
 use input::PickingEvent;
-use pathfinding::a_star;
+use player_pathing::find_path;
 use player::{setup_anims, update_health_bar};
 use seldom_state::prelude::*;
 use std::{any::type_name, f32::consts::FRAC_PI_2, time::Duration};
@@ -38,7 +38,7 @@ pub mod components;
 pub mod connection;
 pub mod input;
 pub mod movement;
-pub mod pathfinding;
+pub mod player_pathing;
 pub mod player;
 pub mod plugins;
 pub mod receive;
@@ -107,7 +107,7 @@ fn main() {
     app.add_system(update_health_bar);
     app.add_system(client_send_player_commands);
     app.add_system(load_anims.run_if(should_load_anims));
-    app.add_system(a_star);
+    app.add_system(find_path);
     app.add_event::<ClickEvent>();
     app.add_event::<PickingEvent>();
     app.add_event::<PlayerCommand>();
