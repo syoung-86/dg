@@ -71,41 +71,41 @@ impl Nodes {
         for tile in self.tiles.iter() {
             //North
             if tile.cell.0 == current.cell.0 + 1 && tile.cell.2 == current.cell.2 {
-                neighbours.push((*current, 10));
+                neighbours.push((*tile, 10));
             }
             //North East
             if tile.cell.0 == current.cell.0 + 1 && tile.cell.2 == current.cell.2 + 1 {
-                neighbours.push((*current, 14));
+                neighbours.push((*tile, 14));
             }
 
             //East
             if tile.cell.2 == current.cell.2 + 1 && tile.cell.0 == current.cell.0 {
-                neighbours.push((*current, 10));
+                neighbours.push((*tile, 10));
             }
             //South East
             if current.cell.0 != 0 {
                 if tile.cell.0 == current.cell.0 - 1 && tile.cell.2 == current.cell.2 + 1 {
-                    neighbours.push((*current, 14));
+                    neighbours.push((*tile, 14));
                 }
                 //South
                 if tile.cell.0 == current.cell.0 - 1 && tile.cell.2 == current.cell.2 {
-                    neighbours.push((*current, 10));
+                    neighbours.push((*tile, 10));
                 }
             }
             //South West
             if current.cell.0 != 0 && current.cell.2 != 0 {
                 if tile.cell.0 == current.cell.0 - 1 && tile.cell.2 == current.cell.2 - 1 {
-                    neighbours.push((*current, 14));
+                    neighbours.push((*tile, 14));
                 }
             }
             if current.cell.2 != 0 {
                 //West
                 if tile.cell.2 == current.cell.2 - 1 && tile.cell.0 == current.cell.0 {
-                    neighbours.push((*current, 10));
+                    neighbours.push((*tile, 10));
                 }
                 //North West
                 if tile.cell.0 == current.cell.0 + 1 && tile.cell.2 == current.cell.2 - 1 {
-                    neighbours.push((*current, 14));
+                    neighbours.push((*tile, 14));
                 }
             }
         }
@@ -122,7 +122,6 @@ impl Nodes {
         let dz = pos.cell.2.abs_diff(self.goal.cell.2);
         let h_cost = dx + dz;
         let f_cost = g_cost + h_cost;
-        println!("f cost: {:?}", f_cost);
         f_cost
     }
 
@@ -198,16 +197,13 @@ where
             let new_cost = cost + move_cost;
             let h; // heuristic(&successor)
             let n; // index for successor
-                    println!("for successor");
             match parents.entry(successor) {
                 Vacant(e) => {
-                    println!("vacant");
                     h = heuristic(e.key());
                     n = e.index();
                     e.insert((index, new_cost));
                 }
                 Occupied(mut e) => {
-                    println!("occupied");
                     if e.get().1 > new_cost {
                         h = heuristic(e.key());
                         n = e.index();
