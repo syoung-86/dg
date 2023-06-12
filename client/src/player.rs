@@ -58,8 +58,8 @@ pub fn setup_anims(
                         //println!("combat_state: {:?}", combat_state);
                         match combat_state {
                             CombatState::Punching(end_tick) => {
-                                if *end_tick >= tick.tick {
-                                    player.play(animations.0[7].clone_weak());
+                                if *end_tick >= tick.tick - 3 {
+                                    player.play(animations.0[4].clone_weak());
                                     //println!("Punching");
                                 } else {
                                     commands.entity(e).insert(CombatState::Idle);
@@ -69,11 +69,15 @@ pub fn setup_anims(
                             }
                             CombatState::Idle => {
                                 if running.is_some() {
-                                    player.play(animations.0[9].clone_weak()).repeat();
-                                } else {
                                     player.play(animations.0[3].clone_weak()).repeat();
+                                } else {
+                                    player.play(animations.0[0].clone_weak()).repeat();
                                 }
                             }
+                            // 0 combat idle
+                            // 5 block
+                            // 6 block idle
+                            // 7 walk
                         }
                         //}
                     }

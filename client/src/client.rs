@@ -7,8 +7,8 @@ use bevy::{
 use bevy_easings::*;
 use bevy_mod_picking::prelude::*;
 use input::PickingEvent;
-use player_pathing::find_path;
 use player::{setup_anims, update_health_bar};
+use player_pathing::find_path;
 use seldom_state::prelude::*;
 use std::{any::type_name, f32::consts::FRAC_PI_2, time::Duration};
 use sync::{spawn, update};
@@ -30,7 +30,7 @@ use lib::{
 use movement::{client_send_player_commands, get_path, scheduled_movement};
 use receive::{despawn_message, load_message, spawn_message, tick, update_message};
 use resources::{ClientLobby, NetworkMapping};
-use smooth_bevy_cameras::LookTransformPlugin;
+use smooth_bevy_cameras::{controllers::orbit::OrbitCameraPlugin, LookTransformPlugin};
 
 pub mod assets;
 pub mod camera;
@@ -38,8 +38,8 @@ pub mod components;
 pub mod connection;
 pub mod input;
 pub mod movement;
-pub mod player_pathing;
 pub mod player;
+pub mod player_pathing;
 pub mod plugins;
 pub mod receive;
 pub mod resources;
@@ -63,6 +63,7 @@ fn main() {
 
     app.add_plugin(InputManagerPlugin::<Action>::default());
     app.add_plugin(EasingsPlugin);
+    app.add_plugin(OrbitCameraPlugin::default());
     app.add_plugins(DefaultPickingPlugins);
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
     app.insert_resource(Tick::default());

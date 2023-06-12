@@ -9,7 +9,7 @@ pub struct ManAssetPack(pub Handle<Gltf>);
 impl FromWorld for ManAssetPack {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.get_resource::<AssetServer>().unwrap();
-        let gltf = asset_server.load("man.glb");
+        let gltf = asset_server.load("rpg_man.glb");
         ManAssetPack(gltf)
     }
 }
