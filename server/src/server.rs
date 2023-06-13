@@ -19,8 +19,8 @@ use resources::ServerLobby;
 use seldom_state::prelude::*;
 use send::spawn;
 use sync::{
-    create_scope, entered_left_scope, send_chunk, send_updates,
-    update_combat_state, update_health, update_target, update_tile,
+    create_scope, entered_left_scope, send_chunk, send_updates, update_combat_state, update_health,
+    update_target, update_tile,
 };
 use world::create_tiles;
 
@@ -78,7 +78,6 @@ fn main() {
             update_target,
             update_combat_state,
             send_updates,
-            spawn_wall,
         )
             .chain()
             .in_schedule(CoreSchedule::FixedUpdate),
@@ -88,19 +87,33 @@ fn main() {
             .in_schedule(CoreSchedule::FixedUpdate),
     );
     app.add_startup_system(create_tiles);
-    //app.add_startup_system(spawn_wall.after(create_tiles));
+    app.add_startup_system(spawn_room.after(create_tiles));
     app.add_startup_system(spawn_dummy);
     app.add_event::<ClientSetup>();
     app.run();
 }
+const ROOM_SIZE: u32 = 16;
+pub fn spawn_room(mut commands: Commands) {
+    for z in 0..ROOM_SIZE {
+        commands.spawn((EntityType::Wall(Wall::Vertical), Tile::new((0, 0, z))));
+    }
 
-pub fn spawn_wall(
-    mut commands: Commands,
-    tiles: Query<(Entity, &Tile, &EntityType), Without<Untraversable>>,
-) {
-    //for z in 4..10 {
-    //commands.spawn((EntityType::Wall(Wall::Vertical), Tile::new((4, 0, z))));
-    //}
+    for z in 0..ROOM_SIZE {
+        commands.spawn((
+            EntityType::Wall(Wall::Vertical),
+            Tile::new((ROOM_SIZE - 1, 0, z)),
+        ));
+    }
+    for x in 0..ROOM_SIZE {
+        commands.spawn((EntityType::Wall(Wall::Horizontal), Tile::new((x, 0, 0))));
+    }
+
+    for x in 0..ROOM_SIZE {
+        commands.spawn((
+            EntityType::Wall(Wall::Horizontal),
+            Tile::new((x, 0, ROOM_SIZE - 1)),
+        ));
+    }
     //for (e, tile, e_t) in tiles.iter() {
     ////println!("inserted untraversable");
     //if *e_t == EntityType::Tile {
@@ -110,18 +123,18 @@ pub fn spawn_wall(
     //}
     //}
     //}
-    let untraversable: Vec<Entity> = tiles
-        .iter()
-        .filter(|(_entity, tile, e_t)| {
-            **e_t == EntityType::Tile && tile.cell.2 >= 4 && tile.cell.2 <= 10 && tile.cell.0 == 4
-        })
-        .map(|(entity, _tile, _)| (entity))
-        .collect();
+    //let untraversable: Vec<Entity> = tiles
+    //.iter()
+    //.filter(|(_entity, tile, e_t)| {
+    //**e_t == EntityType::Tile && tile.cell.2 >= 4 && tile.cell.2 <= 10 && tile.cell.0 == 4
+    //})
+    //.map(|(entity, _tile, _)| (entity))
+    //.collect();
 
-    for e in untraversable {
-        commands.entity(e).insert(Untraversable);
-        //println!("inserted untraversable");
-    }
+    //for e in untraversable {
+    //commands.entity(e).insert(Untraversable);
+    ////println!("inserted untraversable");
+    //}
 }
 pub fn combat_events(
     mut query: Query<(Entity, &mut Health)>,

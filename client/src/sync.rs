@@ -4,13 +4,19 @@ use bevy::{gltf::Gltf, prelude::*};
 use bevy_easings::*;
 use bevy_mod_picking::prelude::*;
 use bevy_renet::renet::RenetClient;
+use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 use leafwing_input_manager::prelude::*;
 use lib::components::{
-    Action, CombatState, ComponentType, ControlledEntity, Door, EntityType, Health, HealthBar,
-    LeftClick, SpawnEvent, Sword, Target, Tile, UpdateEvent, Wall, Untraversable, FloorTile,
+    Action, CombatState, ComponentType, ControlledEntity, Door, EntityType, FloorTile, Health,
+    HealthBar, LeftClick, SpawnEvent, Sword, Target, Tile, Untraversable, UpdateEvent, Wall,
 };
 
-use crate::{assets::ManAssetPack, resources::NetworkMapping, PlayerBundle};
+use crate::{
+    assets::{ManAssetPack, WallAssetPack},
+    input::PickingEvent,
+    resources::NetworkMapping,
+    PlayerBundle, SpawnWallEvent,
+};
 
 pub fn update(
     mut commands: Commands,
@@ -119,27 +125,44 @@ pub fn spawn(
     mut meshes: ResMut<Assets<Mesh>>,
     client: Res<RenetClient>,
     man_scene: Res<ManAssetPack>,
+    cube_scene: Res<WallAssetPack>,
     assets: Res<Assets<Gltf>>,
+    mut spawn_wall_event: EventWriter<SpawnWallEvent>,
 ) {
     for event in spawn_event.iter() {
+        let event_tile = event.tile;
         match event.entity_type {
             EntityType::Tile => {
-                let transform = event.tile.to_transform();
-                commands.entity(event.entity).insert((
-                    PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Box::new(1., 0.2, 1.))),
-                        material: materials.add(Color::rgb(0.2, 0.5, 0.2).into()),
-                        transform,
-                        ..Default::default()
-                    },
-                    event.tile,
-                    //PickableBundle::default(),
-                    //RaycastPickTarget::default(),
-                    //NoDeselect,
-                    LeftClick::Walk,
-                    FloorTile,
-                ));
-                //.forward_events::<PointerDown, PickingEvent>()
+                if let Some(gltf) = assets.get(&cube_scene.0) {
+                    commands.entity(event.entity).insert((
+                        SceneBundle {
+                            scene: gltf.named_scenes.get("Scene.001").unwrap().clone(),
+                            transform: event.tile.to_transform(),
+                            ..Default::default()
+                        },
+                        LeftClick::Walk,
+                        FloorTile,
+                        event.tile,
+                        //OnPointer::<Down>::send_event::<PickingEvent>(),
+                    ));
+                } else {
+                    let transform = event.tile.to_transform();
+                    commands.entity(event.entity).insert((
+                        PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Box::new(1., 0.2, 1.))),
+                            material: materials.add(Color::rgb(0.2, 0.5, 0.2).into()),
+                            transform,
+                            ..Default::default()
+                        },
+                        event.tile,
+                        //PickableBundle::default(),
+                        //RaycastPickTarget::default(),
+                        //NoDeselect,
+                        LeftClick::Walk,
+                        FloorTile,
+                    ));
+                    //.forward_events::<PointerDown, PickingEvent>()
+                }
             }
             EntityType::Player(player) => {
                 println!("event.tile:{:?}", event.tile);
@@ -188,32 +211,35 @@ pub fn spawn(
                 commands.spawn(Sword);
                 println!("spawned sword");
             }
-            EntityType::Wall(wall) => match wall {
-                Wall::Horizontal => {
-                    commands.entity(event.entity).insert((
-                        wall,
-                        event.tile,
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 5., 0.2))),
-                            material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
-                            transform: event.tile.to_transform(),
-                            ..Default::default()
-                        },
-                    ));
-                }
-                Wall::Vertical => {
-                    commands.entity(event.entity).insert((
-                        wall,
-                        event.tile,
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 5., 1.0))),
-                            material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
-                            transform: event.tile.to_transform(),
-                            ..Default::default()
-                        },
-                    ));
-                }
-            },
+            EntityType::Wall(wall) => spawn_wall_event.send(SpawnWallEvent {
+                wall,
+                tile: event.tile,
+            }),
+            //Wall::Horizontal => {
+            //commands.entity(event.entity).insert((
+            //wall,
+            //event.tile,
+            //PbrBundle {
+            //mesh: meshes.add(Mesh::from(shape::Box::new(1.0, 5., 0.2))),
+            //material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
+            //transform: event.tile.to_transform(),
+            //..Default::default()
+            //},
+            //));
+            //}
+            //Wall::Vertical => {
+            //commands.entity(event.entity).insert((
+            //wall,
+            //event.tile,
+            //PbrBundle {
+            //mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 5., 1.0))),
+            //material: materials.add(Color::rgb(1.0, 0.5, 0.2).into()),
+            //transform: event.tile.to_transform(),
+            //..Default::default()
+            //},
+            //));
+            //}
+            //,
             EntityType::Door(door) => match door {
                 Door::Vertical => {
                     commands.entity(event.entity).insert((

@@ -55,7 +55,7 @@ pub fn client_handler(
                 let player = commands
                     .spawn((
                         EntityType::Player(Player { id: *id }),
-                        Tile { cell: (x, 0, 0) },
+                        Tile { cell: (x, 0, 4) },
                         StateMachine::new(Idle)
                             .trans::<Idle>(Moving, Running)
                             .insert_on_enter::<Running>(Running)

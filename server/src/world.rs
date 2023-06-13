@@ -12,9 +12,9 @@ pub fn create_tiles(mut commands: Commands) {
             }
         }
     }
-    for z in 4..10 {
-        commands.spawn((EntityType::Wall(Wall::Vertical), Tile::new((4, 0, z))));
-    }
+    //for z in 4..10 {
+        //commands.spawn((EntityType::Wall(Wall::Vertical), Tile::new((4, 0, z))));
+    //}
 }
 
 pub fn spawn_chunk(commands: &mut Commands, start: (u32, u32, u32)) -> Vec<Entity> {

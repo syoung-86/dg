@@ -71,10 +71,11 @@ pub fn setup_anims(
                                 if running.is_some() {
                                     player.play(animations.0[3].clone_weak()).repeat();
                                 } else {
-                                    player.play(animations.0[0].clone_weak()).repeat();
+                                    player.play(animations.0[2].clone_weak()).repeat();
                                 }
                             }
                             // 0 combat idle
+                            // 2 idle idle
                             // 5 block
                             // 6 block idle
                             // 7 walk

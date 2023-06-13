@@ -1,6 +1,7 @@
-use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims};
+use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims, WallAssetPack};
 use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
+    gltf::Gltf,
     math::vec4,
     prelude::*,
 };
@@ -20,9 +21,8 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     components::{
-        Action, ControlledEntity, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player,
-        PlayerCommand, Running, SpawnEvent, Target, TickEvent, Tile, Untraversable, UpdateEvent,
-        Wall,
+        Action, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand, Running,
+        SpawnEvent, TickEvent, Tile, Untraversable, UpdateEvent, Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -80,6 +80,7 @@ fn main() {
     //app.add_plugin(UnrealCameraPlugin::default());
 
     app.add_startup_system(setup_camera);
+    app.add_system(spawn_cube);
     app.add_system(server_messages);
     app.add_system(camera_follow);
     //app.add_system(load);
@@ -89,6 +90,7 @@ fn main() {
     app.insert_resource(Animations::default());
     app.insert_resource(ShouldLoadAnims(true));
     app.init_resource::<ManAssetPack>();
+    app.init_resource::<WallAssetPack>();
     //app.add_system(despawn);
     app.add_system(get_path);
     app.add_system(scheduled_movement);
@@ -116,10 +118,52 @@ fn main() {
     app.add_event::<DespawnEvent>();
     app.add_event::<UpdateEvent>();
     app.add_event::<TickEvent>();
+    app.add_event::<SpawnWallEvent>();
     app.register_type::<Tile>();
     app.register_type::<Health>();
     app.run();
 }
+
+pub struct SpawnWallEvent {
+    pub wall: Wall,
+    pub tile: Tile,
+}
+//#[bevycheck::system]
+pub fn spawn_cube(
+    mut commands: Commands,
+    assets: Res<Assets<Gltf>>,
+    cube_scene: Res<WallAssetPack>,
+    mut spawn_wall_event: EventReader<SpawnWallEvent>,
+) {
+    for event in spawn_wall_event.iter() {
+        if let Some(gltf) = assets.get(&cube_scene.0) {
+            commands.spawn((
+                SceneBundle {
+                    scene: gltf.named_scenes.get("Scene").unwrap().clone(),
+                    transform: event.tile.to_transform(),
+                    ..Default::default()
+                },
+                event.wall,
+                event.tile,
+            ));
+        } else {
+            loop {
+                if let Some(gltf) = assets.get(&cube_scene.0) {
+                    commands.spawn((
+                        SceneBundle {
+                            scene: gltf.named_scenes.get("Scene").unwrap().clone(),
+                            transform: event.tile.to_transform(),
+                            ..Default::default()
+                        },
+                        event.wall,
+                        event.tile,
+                    ));
+                }
+            }
+        }
+    }
+}
+
 // this inserts untrav twice for some reason
 pub fn update_trav(
     walls: Query<&Tile, With<Wall>>,
@@ -269,9 +313,21 @@ pub fn mouse_input(
     mut click_event: EventWriter<ClickEvent>,
     mut events: EventReader<PickingEvent>,
     query: Query<(Entity, &LeftClick, &Tile)>,
+    parent: Query<(&Parent)>,
+    mut commands: Commands,
 ) {
     for event in events.iter() {
         if let PickingEvent::Clicked(clicked_entity) = event {
+            if let Ok(p) = parent.get(*clicked_entity) {
+                if let Ok(p) = parent.get(p.get()) {
+                    if let Ok(p) = parent.get(p.get()) {
+                        //commands.entity(p.get()).log_components();
+                        if let Ok((target, left_click, destination)) = &query.get(p.get()) {
+                            click_event.send(ClickEvent::new(*target, **left_click, **destination));
+                        }
+                    }
+                }
+            }
             if let Ok((target, left_click, destination)) = &query.get(*clicked_entity) {
                 click_event.send(ClickEvent::new(*target, **left_click, **destination));
             }
