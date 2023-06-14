@@ -8,8 +8,8 @@ use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 use leafwing_input_manager::prelude::*;
 use lib::components::{
     Action, Arch, CombatState, ComponentType, ControlledEntity, Door, EntityType, FloorTile,
-    Health, HealthBar, LeftClick, SpawnEvent, Sword, Target, Tile, Untraversable, UpdateEvent,
-    Wall,
+    Health, HealthBar, LeftClick, OpenState, SpawnEvent, Sword, Target, Tile, Untraversable,
+    UpdateEvent, Wall,
 };
 
 use crate::{
@@ -111,8 +111,48 @@ pub fn update(
                         commands
                             .entity(event.entity)
                             .insert(Target(Some(*client_entity)));
-                        println!("inserted target");
+                        //println!("inserted target");
                     }
+                }
+            }
+            ComponentType::OpenState(open_state) => {
+                println!("rotated");
+                println!("rotated");
+                println!("rotated");
+                println!("rotated");
+                println!("rotated");
+                println!("rotated");
+                println!("rotated");
+                println!("rotated");
+                if let Ok((e, transform, _tile)) = query.get(event.entity) {
+                    let mut open_trans = transform.clone();
+                    match open_state {
+                        OpenState::Open => {
+                            open_trans.rotate_y(1.570796);
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                        }
+                        OpenState::Closed => {
+                            open_trans.rotate_y(-1.570796);
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                            println!("rotated");
+                        }
+                    }
+                    commands.entity(e).insert(open_trans);
                 }
             }
         };
@@ -296,10 +336,9 @@ pub fn spawn(
                                 transform: event.tile.to_transform(),
                                 ..Default::default()
                             },
-                            //LeftClick::Walk,
-                            //FloorTile,
+                            LeftClick::Open(event.entity),
+                            OpenState::Closed,
                             event.tile,
-                            //OnPointer::<Down>::send_event::<PickingEvent>(),
                         ));
                     }
                 }
@@ -313,10 +352,9 @@ pub fn spawn(
                                 transform,
                                 ..Default::default()
                             },
-                            //LeftClick::Walk,
-                            //FloorTile,
+                            LeftClick::Open(event.entity),
+                            OpenState::Closed,
                             event.tile,
-                            //OnPointer::<Down>::send_event::<PickingEvent>(),
                         ));
                     }
                 }

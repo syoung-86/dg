@@ -7,8 +7,8 @@ use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::ServerChannel,
     components::{
-        Action, Arch, Client, CombatState, Door, Dummy, EntityType, Health, LeftClick, Player,
-        Scope, SpawnEvent, SyncEvent, Tile, Untraversable, Wall,
+        Action, Arch, Client, CombatState, Door, Dummy, EntityType, Health, LeftClick, OpenState,
+        Player, Scope, SpawnEvent, SyncEvent, Tile, Untraversable, Wall,
     },
     resources::Tick,
     TickSet,
@@ -20,7 +20,7 @@ use seldom_state::prelude::*;
 use send::spawn;
 use sync::{
     create_scope, entered_left_scope, send_chunk, send_updates, update_combat_state, update_health,
-    update_target, update_tile,
+    update_open_state, update_target, update_tile,
 };
 use world::create_tiles;
 
@@ -77,6 +77,7 @@ fn main() {
             update_health,
             update_target,
             update_combat_state,
+            update_open_state,
             send_updates,
         )
             .chain()
@@ -110,6 +111,7 @@ pub fn spawn_room(mut commands: Commands) {
             commands.spawn((
                 EntityType::Door(Door::Horizontal),
                 Tile::new((ROOM_SIZE - 1, 0, z)),
+                OpenState::Closed,
             ));
         } else {
             commands.spawn((

@@ -21,8 +21,8 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     components::{
-        Action, Arch, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand,
-        Running, SpawnEvent, TickEvent, Tile, Untraversable, UpdateEvent, Wall,
+        Action, Arch, DespawnEvent, Door, Health, Idle, LeftClick, Open, OpenState, Player,
+        PlayerCommand, Running, SpawnEvent, TickEvent, Tile, Untraversable, UpdateEvent, Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -170,7 +170,7 @@ pub struct InsertUntraversableEvent(Tile);
 pub fn update_trav(
     //walls: Query<&Tile, With<Wall>>,
     //arches: Query<(&Tile, &Arch)>,
-    tiles: Query<(Entity, &Tile), Without<Untraversable>>,
+    tiles: Query<(Entity, &Tile), (Without<Untraversable>, Without<OpenState>)>,
     mut events: EventReader<InsertUntraversableEvent>,
     mut commands: Commands,
 ) {
@@ -332,7 +332,7 @@ pub fn mouse_input(
     mut click_event: EventWriter<ClickEvent>,
     mut events: EventReader<PickingEvent>,
     query: Query<(Entity, &LeftClick, &Tile)>,
-    parent: Query<(&Parent)>,
+    parent: Query<&Parent>,
     mut commands: Commands,
 ) {
     for event in events.iter() {
@@ -340,9 +340,10 @@ pub fn mouse_input(
             if let Ok(p) = parent.get(*clicked_entity) {
                 if let Ok(p) = parent.get(p.get()) {
                     if let Ok(p) = parent.get(p.get()) {
-                        //commands.entity(p.get()).log_components();
                         if let Ok((target, left_click, destination)) = &query.get(p.get()) {
+                            //commands.entity(p.get()).log_components();
                             click_event.send(ClickEvent::new(*target, **left_click, **destination));
+                            println!("clicked event: {:?}", **left_click);
                         }
                     }
                 }

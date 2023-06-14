@@ -4,7 +4,7 @@ use lib::{
     channels::ServerChannel,
     components::{
         Client, CombatState, ComponentType, Dummy, EntityType, Health, Player, Scope, SpawnEvent,
-        SyncEvent, Target, Tile, Untraversable, UpdateEvent,
+        SyncEvent, Target, Tile, Untraversable, UpdateEvent, OpenState,
     },
     OpenEvent, ServerEvents,
 };
@@ -69,6 +69,7 @@ update_component!(update_health, Health);
 update_component!(update_tile, Tile);
 update_component!(update_target, Target);
 update_component!(update_combat_state, CombatState);
+update_component!(update_open_state, OpenState);
 
 pub fn send_chunk(
     query: Query<(Entity, &EntityType, &Tile)>,

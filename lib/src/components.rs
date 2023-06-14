@@ -135,12 +135,20 @@ pub enum EntityType {
 pub struct ControlledEntity;
 
 #[derive(Eq, PartialEq, Copy, Clone, Default, Debug, Serialize, Deserialize, Component)]
+pub enum OpenState {
+    #[default]
+    Closed,
+    Open,
+}
+#[derive(Eq, PartialEq, Copy, Clone, Default, Debug, Serialize, Deserialize, Component)]
 pub enum LeftClick {
     #[default]
     Walk,
     Attack(Entity),
     Pickup(Option<Entity>),
     Pull,
+    Open(Entity),
+    Close(Entity),
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize, Component)]
@@ -152,6 +160,7 @@ pub enum ComponentType {
     Running(Running),
     Target(Target),
     CombatState(CombatState),
+    OpenState(OpenState),
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]

@@ -83,7 +83,8 @@ impl Nodes {
 
 pub fn find_path(
     path_query: Query<&Path, Changed<Path>>,
-    tiles: Query<&Tile, (With<FloorTile>, Without<Untraversable>)>,
+    //tiles: Query<&Tile, (With<FloorTile>, Without<Untraversable>)>,
+    tiles: Query<&Tile, Without<Untraversable>>,
     tick: Res<Tick>,
     player: Query<Entity, With<ControlledEntity>>,
     mut commands: Commands,

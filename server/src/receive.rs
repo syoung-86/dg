@@ -4,7 +4,9 @@ use bevy::prelude::{
 use bevy_renet::renet::RenetServer;
 use lib::{
     channels::{ClientChannel, ServerChannel},
-    components::{Action, CombatState, CoolDowns, EntityType, LeftClick, PlayerCommand, Target},
+    components::{
+        Action, CombatState, CoolDowns, EntityType, LeftClick, OpenState, PlayerCommand, Target,
+    },
     resources::Tick,
     ClickEvent,
 };
@@ -27,6 +29,7 @@ pub fn message(
             //println!("receive  msg {:?}", command);
             match command {
                 PlayerCommand::LeftClick(left_click, tile) => {
+                    println!("left click event: {:?}", left_click);
                     left_click_event.send(LeftClickEvent {
                         client_id,
                         left_click,
@@ -113,6 +116,12 @@ pub fn left_click(
                         .entity(client.controlled_entity)
                         .insert(Target(Some(e)));
                 }
+            }
+            LeftClick::Open(e) => {
+                commands.entity(e).insert(OpenState::Open);
+            }
+            LeftClick::Close(e) => {
+                commands.entity(e).insert(OpenState::Closed);
             }
             LeftClick::Pull => todo!(),
             LeftClick::Pickup(_) => todo!(),
