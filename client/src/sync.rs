@@ -7,15 +7,16 @@ use bevy_renet::renet::RenetClient;
 use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 use leafwing_input_manager::prelude::*;
 use lib::components::{
-    Action, CombatState, ComponentType, ControlledEntity, Door, EntityType, FloorTile, Health,
-    HealthBar, LeftClick, SpawnEvent, Sword, Target, Tile, Untraversable, UpdateEvent, Wall,
+    Action, Arch, CombatState, ComponentType, ControlledEntity, Door, EntityType, FloorTile,
+    Health, HealthBar, LeftClick, SpawnEvent, Sword, Target, Tile, Untraversable, UpdateEvent,
+    Wall,
 };
 
 use crate::{
     assets::{ManAssetPack, WallAssetPack},
     input::PickingEvent,
     resources::NetworkMapping,
-    PlayerBundle, SpawnWallEvent,
+    InsertUntraversableEvent, PlayerBundle, SpawnWallEvent,
 };
 
 pub fn update(
@@ -128,6 +129,7 @@ pub fn spawn(
     cube_scene: Res<WallAssetPack>,
     assets: Res<Assets<Gltf>>,
     mut spawn_wall_event: EventWriter<SpawnWallEvent>,
+    mut untrav_event: EventWriter<InsertUntraversableEvent>,
 ) {
     for event in spawn_event.iter() {
         let event_tile = event.tile;
@@ -211,10 +213,13 @@ pub fn spawn(
                 commands.spawn(Sword);
                 println!("spawned sword");
             }
-            EntityType::Wall(wall) => spawn_wall_event.send(SpawnWallEvent {
-                wall,
-                tile: event.tile,
-            }),
+            EntityType::Wall(wall) => {
+                spawn_wall_event.send(SpawnWallEvent {
+                    wall,
+                    tile: event.tile,
+                });
+                untrav_event.send(InsertUntraversableEvent(event.tile));
+            }
             //Wall::Horizontal => {
             //commands.entity(event.entity).insert((
             //wall,
@@ -240,20 +245,81 @@ pub fn spawn(
             //));
             //}
             //,
+            EntityType::Arch(arch) => match arch {
+                Arch::Vertical => {
+                    if let Some(gltf) = assets.get(&cube_scene.0) {
+                        commands.entity(event.entity).insert((
+                            SceneBundle {
+                                scene: gltf.named_scenes.get("arch").unwrap().clone(),
+                                transform: event.tile.to_transform(),
+                                ..Default::default()
+                            },
+                            //LeftClick::Walk,
+                            //FloorTile,
+                            event.tile,
+                            //OnPointer::<Down>::send_event::<PickingEvent>(),
+                        ));
+                        untrav_event.send(InsertUntraversableEvent(event.tile));
+                        let mut arch_v_tile: Tile = event.tile;
+                        arch_v_tile.cell.0 += 2;
+                        untrav_event.send(InsertUntraversableEvent(arch_v_tile));
+                    }
+                }
+                Arch::Horizontal => {
+                    if let Some(gltf) = assets.get(&cube_scene.0) {
+                        let mut transform = event.tile.to_transform();
+                        transform.rotate_y(-1.570796);
+                        commands.entity(event.entity).insert((
+                            SceneBundle {
+                                scene: gltf.named_scenes.get("arch").unwrap().clone(),
+                                transform,
+                                ..Default::default()
+                            },
+                            //LeftClick::Walk,
+                            //FloorTile,
+                            event.tile,
+                            //OnPointer::<Down>::send_event::<PickingEvent>(),
+                        ));
+                        untrav_event.send(InsertUntraversableEvent(event.tile));
+                        let mut arch_h_tile: Tile = event.tile;
+                        arch_h_tile.cell.2 += 2;
+                        untrav_event.send(InsertUntraversableEvent(arch_h_tile));
+                    }
+                }
+            },
             EntityType::Door(door) => match door {
                 Door::Vertical => {
-                    commands.entity(event.entity).insert((
-                        door,
-                        event.tile,
-                        PbrBundle {
-                            mesh: meshes.add(Mesh::from(shape::Box::new(0.2, 5., 2.0))),
-                            material: materials.add(Color::rgb(2.0, 0.5, 0.8).into()),
-                            transform: event.tile.to_transform(),
-                            ..Default::default()
-                        },
-                    ));
+                    if let Some(gltf) = assets.get(&cube_scene.0) {
+                        commands.entity(event.entity).insert((
+                            SceneBundle {
+                                scene: gltf.named_scenes.get("door").unwrap().clone(),
+                                transform: event.tile.to_transform(),
+                                ..Default::default()
+                            },
+                            //LeftClick::Walk,
+                            //FloorTile,
+                            event.tile,
+                            //OnPointer::<Down>::send_event::<PickingEvent>(),
+                        ));
+                    }
                 }
-                _ => (),
+                _ => {
+                    if let Some(gltf) = assets.get(&cube_scene.0) {
+                        let mut transform = event.tile.to_transform();
+                        transform.rotate_y(-1.570796);
+                        commands.entity(event.entity).insert((
+                            SceneBundle {
+                                scene: gltf.named_scenes.get("door").unwrap().clone(),
+                                transform,
+                                ..Default::default()
+                            },
+                            //LeftClick::Walk,
+                            //FloorTile,
+                            event.tile,
+                            //OnPointer::<Down>::send_event::<PickingEvent>(),
+                        ));
+                    }
+                }
             },
             EntityType::Lever(lever) => {
                 commands.entity(event.entity).insert((

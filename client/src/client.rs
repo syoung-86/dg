@@ -21,8 +21,8 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     components::{
-        Action, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand, Running,
-        SpawnEvent, TickEvent, Tile, Untraversable, UpdateEvent, Wall,
+        Action, Arch, DespawnEvent, Door, Health, Idle, LeftClick, Open, Player, PlayerCommand,
+        Running, SpawnEvent, TickEvent, Tile, Untraversable, UpdateEvent, Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -118,6 +118,7 @@ fn main() {
     app.add_event::<DespawnEvent>();
     app.add_event::<UpdateEvent>();
     app.add_event::<TickEvent>();
+    app.add_event::<InsertUntraversableEvent>();
     app.add_event::<SpawnWallEvent>();
     app.register_type::<Tile>();
     app.register_type::<Health>();
@@ -165,17 +166,35 @@ pub fn spawn_cube(
 }
 
 // this inserts untrav twice for some reason
+pub struct InsertUntraversableEvent(Tile);
 pub fn update_trav(
-    walls: Query<&Tile, With<Wall>>,
+    //walls: Query<&Tile, With<Wall>>,
+    //arches: Query<(&Tile, &Arch)>,
     tiles: Query<(Entity, &Tile), Without<Untraversable>>,
+    mut events: EventReader<InsertUntraversableEvent>,
     mut commands: Commands,
 ) {
-    for (e, tile) in tiles.iter() {
-        for wall in walls.iter() {
-            if tile.cell == wall.cell {
+    for event in events.iter() {
+        for (e, tile) in tiles.iter() {
+            if tile.cell == event.0.cell {
                 commands.entity(e).insert(Untraversable);
             }
         }
+        //for wall in walls.iter() {
+        //if tile.cell == wall.cell {
+        //commands.entity(e).insert(Untraversable);
+        //}
+        //}
+        //for (arch_tile, arch) in arches.iter() {
+        //let mut arch_v_tile: Tile = *arch_tile;
+        //arch_v_tile.cell.2 += 2;
+        //let mut arch_h_tile: Tile = *arch_tile;
+        //arch_h_tile.cell.0 += 2;
+        //match arch {
+        //Arch::Vertical => if tile.cell == arch_tile.cell || tile.cell == arch_tile.cell {},
+        //Arch::Horizontal => (),
+        //}
+        //}
     }
 }
 pub fn auto_attack(

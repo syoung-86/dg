@@ -7,8 +7,8 @@ use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::ServerChannel,
     components::{
-        Action, Client, CombatState, Dummy, EntityType, Health, LeftClick, Player, Scope,
-        SpawnEvent, SyncEvent, Tile, Untraversable, Wall,
+        Action, Arch, Client, CombatState, Door, Dummy, EntityType, Health, LeftClick, Player,
+        Scope, SpawnEvent, SyncEvent, Tile, Untraversable, Wall,
     },
     resources::Tick,
     TickSet,
@@ -92,27 +92,63 @@ fn main() {
     app.add_event::<ClientSetup>();
     app.run();
 }
-const ROOM_SIZE: u32 = 16;
+const ROOM_SIZE: u32 = 14;
 pub fn spawn_room(mut commands: Commands) {
     for z in 0..ROOM_SIZE {
-        commands.spawn((EntityType::Wall(Wall::Vertical), Tile::new((0, 0, z))));
+        commands.spawn((EntityType::Wall(Wall::Horizontal), Tile::new((0, 0, z))));
     }
 
     for z in 0..ROOM_SIZE {
-        commands.spawn((
-            EntityType::Wall(Wall::Vertical),
-            Tile::new((ROOM_SIZE - 1, 0, z)),
-        ));
+        if z >= 7 && z <= 8 {
+            continue;
+        }
+        if z == 6 {
+            commands.spawn((
+                EntityType::Arch(Arch::Horizontal),
+                Tile::new((ROOM_SIZE - 1, 0, z)),
+            ));
+            commands.spawn((
+                EntityType::Door(Door::Horizontal),
+                Tile::new((ROOM_SIZE - 1, 0, z)),
+            ));
+        } else {
+            commands.spawn((
+                EntityType::Wall(Wall::Horizontal),
+                Tile::new((ROOM_SIZE - 1, 0, z)),
+            ));
+        }
     }
     for x in 0..ROOM_SIZE {
+        //if x >= 7 && x <= 8 {
+        //continue;
+        //}
+        //if x == 6 {
+        //commands.spawn((EntityType::Arch(Arch::Vertical), Tile::new((x, 0, 0))));
+        //commands.spawn((EntityType::Door(Door::Vertical), Tile::new((x, 0, 0))));
+        //} else {
         commands.spawn((EntityType::Wall(Wall::Horizontal), Tile::new((x, 0, 0))));
+        //}
     }
 
     for x in 0..ROOM_SIZE {
-        commands.spawn((
-            EntityType::Wall(Wall::Horizontal),
-            Tile::new((x, 0, ROOM_SIZE - 1)),
-        ));
+        if x >= 7 && x <= 8 {
+            continue;
+        }
+        if x == 6 {
+            commands.spawn((
+                EntityType::Arch(Arch::Vertical),
+                Tile::new((x, 0, ROOM_SIZE - 1)),
+            ));
+            commands.spawn((
+                EntityType::Door(Door::Vertical),
+                Tile::new((x, 0, ROOM_SIZE - 1)),
+            ));
+        } else {
+            commands.spawn((
+                EntityType::Wall(Wall::Horizontal),
+                Tile::new((x, 0, ROOM_SIZE - 1)),
+            ));
+        }
     }
     //for (e, tile, e_t) in tiles.iter() {
     ////println!("inserted untraversable");

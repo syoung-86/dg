@@ -127,6 +127,7 @@ pub enum EntityType {
     Sword(Sword),
     Wall(Wall),
     Door(Door),
+    Arch(Arch),
     Lever(Lever),
     Dummy(Dummy),
 }
@@ -320,6 +321,11 @@ pub enum Wall {
     Vertical,
 }
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
+pub enum Arch {
+    Horizontal,
+    Vertical,
+}
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Component)]
 pub enum Door {
     Horizontal,
