@@ -73,12 +73,11 @@ pub fn setup_anims(
                                 } else {
                                     player.play(animations.0[2].clone_weak()).repeat();
                                 }
-                            }
-                            // 0 combat idle
-                            // 2 idle idle
-                            // 5 block
-                            // 6 block idle
-                            // 7 walk
+                            } // 0 combat idle
+                              // 2 idle idle
+                              // 5 block
+                              // 6 block idle
+                              // 7 walk
                         }
                         //}
                     }

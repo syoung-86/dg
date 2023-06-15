@@ -116,40 +116,14 @@ pub fn update(
                 }
             }
             ComponentType::OpenState(open_state) => {
-                println!("rotated");
-                println!("rotated");
-                println!("rotated");
-                println!("rotated");
-                println!("rotated");
-                println!("rotated");
-                println!("rotated");
-                println!("rotated");
                 if let Ok((e, transform, _tile)) = query.get(event.entity) {
                     let mut open_trans = transform.clone();
                     match open_state {
                         OpenState::Open => {
                             open_trans.rotate_y(1.570796);
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
                         }
                         OpenState::Closed => {
                             open_trans.rotate_y(-1.570796);
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
-                            println!("rotated");
                         }
                     }
                     commands.entity(e).insert(open_trans);
@@ -336,6 +310,8 @@ pub fn spawn(
                                 transform: event.tile.to_transform(),
                                 ..Default::default()
                             },
+                            //insert floor tile for pathing
+                            FloorTile,
                             LeftClick::Open(event.entity),
                             OpenState::Closed,
                             event.tile,
@@ -352,6 +328,8 @@ pub fn spawn(
                                 transform,
                                 ..Default::default()
                             },
+                            //insert floor tile for pathing
+                            FloorTile,
                             LeftClick::Open(event.entity),
                             OpenState::Closed,
                             event.tile,

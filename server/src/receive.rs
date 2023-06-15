@@ -29,7 +29,6 @@ pub fn message(
             //println!("receive  msg {:?}", command);
             match command {
                 PlayerCommand::LeftClick(left_click, tile) => {
-                    println!("left click event: {:?}", left_click);
                     left_click_event.send(LeftClickEvent {
                         client_id,
                         left_click,

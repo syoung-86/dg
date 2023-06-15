@@ -52,7 +52,6 @@ macro_rules! update_component {
                             entity,
                             component: ComponentType::$type_name(*component),
                         };
-                        println!("sync event: {:?}", event);
                         update_event.send(SyncEvent::Update(client.id, event));
                     }
                 }

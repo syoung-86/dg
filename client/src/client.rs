@@ -1,4 +1,6 @@
-use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims, WallAssetPack};
+use assets::{
+    load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims, SlimeAssetPack, WallAssetPack,
+};
 use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     gltf::Gltf,
@@ -88,9 +90,12 @@ fn main() {
     app.insert_resource(NetworkMapping::default());
     app.insert_resource(ClientLobby::default());
     app.insert_resource(Animations::default());
+    app.insert_resource(SlimeAnimations::default());
     app.insert_resource(ShouldLoadAnims(true));
+    app.insert_resource(LoadedSlime(true));
     app.init_resource::<ManAssetPack>();
     app.init_resource::<WallAssetPack>();
+    app.init_resource::<SlimeAssetPack>();
     //app.add_system(despawn);
     app.add_system(get_path);
     app.add_system(scheduled_movement);
@@ -109,8 +114,10 @@ fn main() {
     app.add_system(update_trav);
     app.add_system(update_health_bar);
     app.add_system(client_send_player_commands);
+    app.add_system(spawn_slime.run_if(loaded_slime));
     app.add_system(load_anims.run_if(should_load_anims));
     app.add_system(find_path);
+    app.add_system(slime_anims.after(spawn_slime));
     app.add_event::<ClickEvent>();
     app.add_event::<PickingEvent>();
     app.add_event::<PlayerCommand>();
@@ -130,6 +137,79 @@ pub struct SpawnWallEvent {
     pub tile: Tile,
 }
 //#[bevycheck::system]
+#[derive(Resource)]
+pub struct LoadedSlime(bool);
+
+pub fn loaded_slime(loaded_slime: Res<LoadedSlime>) -> bool {
+    loaded_slime.0
+}
+
+pub fn slime_anims(
+    animations: Res<SlimeAnimations>,
+    mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
+    player_parent: Query<(Entity, &Parent, &Children)>,
+    slime_query: Query<Entity, With<Slime>>,
+) {
+    for (parent, mut player) in animation_players.iter_mut() {
+        let player_parent_get = parent.get();
+        for (player_parent_entity, parent_player_parent, _) in player_parent.iter() {
+            if player_parent_get == player_parent_entity {
+                let entity_animate = parent_player_parent.get();
+                for e in slime_query.iter() {
+                    if e == entity_animate {
+                        player.play(animations.0[0].clone_weak()).repeat();
+                    }
+                }
+            }
+        }
+    }
+}
+#[derive(Resource, Default)]
+pub struct SlimeAnimations(pub Vec<Handle<AnimationClip>>);
+
+#[derive(Component)]
+pub struct Slime;
+pub fn spawn_slime(
+    mut commands: Commands,
+    assets: Res<Assets<Gltf>>,
+    slime_scene: Res<SlimeAssetPack>,
+    mut loaded: ResMut<LoadedSlime>,
+) {
+    if let Some(gltf) = assets.get(&slime_scene.0) {
+        let tile = Tile::new((4, 0, 4));
+        commands.spawn((
+            SceneBundle {
+                scene: gltf.named_scenes.get("Scene").unwrap().clone(),
+                transform: tile.to_transform(),
+                ..Default::default()
+            },
+            tile,
+            Slime,
+        ));
+        let mut animations = SlimeAnimations::default();
+        for animation in gltf.animations.iter() {
+            let cloned = animation.clone();
+            animations.0.push(cloned);
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+            println!("added slime anim");
+        }
+        commands.insert_resource(animations);
+        loaded.0 = false;
+    }
+}
 pub fn spawn_cube(
     mut commands: Commands,
     assets: Res<Assets<Gltf>>,
@@ -343,7 +423,12 @@ pub fn mouse_input(
                         if let Ok((target, left_click, destination)) = &query.get(p.get()) {
                             //commands.entity(p.get()).log_components();
                             click_event.send(ClickEvent::new(*target, **left_click, **destination));
-                            println!("clicked event: {:?}", **left_click);
+                            match **left_click {
+                                LeftClick::Open(_) => {
+                                    commands.entity(*target).insert(LeftClick::Close(*target));
+                                }
+                                _ => (),
+                            }
                         }
                     }
                 }

@@ -14,7 +14,6 @@ pub fn get_path(
     query: Query<(Entity, &Tile), With<ControlledEntity>>,
 ) {
     for event in walk_event.iter() {
-        println!("read event");
         if let Ok((entity, origin)) = query.get_single() {
             let path = Path {
                 destination: event.destination,
@@ -55,14 +54,12 @@ pub fn scheduled_movement(
                         commands.entity(*e).despawn_recursive();
                     }
                     LeftClick::Attack(e) =>{
-                        println!("scheded movement");
                         if let Some(server_entity) = network_mapping.client.get(e){
                             player_commands.send(PlayerCommand::LeftClick(LeftClick::Attack(*server_entity), *tile));
                         }
                     }
 
                     LeftClick::Open(e) =>{
-                        println!("scheded movement");
                         if let Some(server_entity) = network_mapping.client.get(e){
                             player_commands.send(PlayerCommand::LeftClick(LeftClick::Open(*server_entity), *tile));
                         }
