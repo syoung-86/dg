@@ -55,12 +55,14 @@ pub fn scheduled_movement(
                     }
                     LeftClick::Attack(e) =>{
                         if let Some(server_entity) = network_mapping.client.get(e){
+                            println!("attack");
                             player_commands.send(PlayerCommand::LeftClick(LeftClick::Attack(*server_entity), *tile));
                         }
                     }
 
                     LeftClick::Open(e) =>{
                         if let Some(server_entity) = network_mapping.client.get(e){
+                            println!("open");
                             player_commands.send(PlayerCommand::LeftClick(LeftClick::Open(*server_entity), *tile));
                         }
                     }

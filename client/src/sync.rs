@@ -16,7 +16,7 @@ use crate::{
     assets::{ManAssetPack, WallAssetPack},
     input::PickingEvent,
     resources::NetworkMapping,
-    InsertUntraversableEvent, PlayerBundle, SpawnWallEvent,
+    InsertUntraversableEvent, PlayerBundle, SpawnSlimeEvent, SpawnWallEvent,
 };
 
 pub fn update(
@@ -143,6 +143,7 @@ pub fn spawn(
     cube_scene: Res<WallAssetPack>,
     assets: Res<Assets<Gltf>>,
     mut spawn_wall_event: EventWriter<SpawnWallEvent>,
+    mut spawn_slime_event: EventWriter<SpawnSlimeEvent>,
     mut untrav_event: EventWriter<InsertUntraversableEvent>,
 ) {
     for event in spawn_event.iter() {
@@ -365,6 +366,20 @@ pub fn spawn(
                 ));
                 let hp_bar = commands.spawn((HealthBar,)).id();
                 commands.entity(event.entity).push_children(&[hp_bar]);
+            }
+            EntityType::Slime(slime) => {
+                println!("send spawn slime event");
+                println!("send spawn slime event");
+                println!("send spawn slime event");
+                println!("send spawn slime event");
+                println!("send spawn slime event");
+                println!("send spawn slime event");
+                println!("send spawn slime event");
+                spawn_slime_event.send(SpawnSlimeEvent {
+                    tile: event.tile,
+                    slime,
+                    entity: event.entity,
+                });
             }
         }
     }

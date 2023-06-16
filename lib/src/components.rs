@@ -130,6 +130,7 @@ pub enum EntityType {
     Arch(Arch),
     Lever(Lever),
     Dummy(Dummy),
+    Slime(Slime),
 }
 #[derive(Component)]
 pub struct ControlledEntity;
@@ -393,3 +394,6 @@ pub enum CombatState {
 
 #[derive(Component)]
 pub struct FloorTile;
+
+#[derive(Eq, PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Component)]
+pub struct Slime;

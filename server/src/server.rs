@@ -7,13 +7,14 @@ use events::{ChunkRequest, ClientSetup};
 use lib::{
     channels::ServerChannel,
     components::{
-        Action, Arch, Client, CombatState, Door, Dummy, EntityType, Health, LeftClick, OpenState,
-        Player, Scope, SpawnEvent, SyncEvent, Tile, Untraversable, Wall,
+        Action, Arch, Client, CombatState, Direction, Door, Dummy, EntityType, Health, LeftClick,
+        OpenState, Player, Scope, Slime, SpawnEvent, SyncEvent, Tile, Untraversable, Wall,
     },
     resources::Tick,
     TickSet,
 };
 use plugins::{ClearEventPlugin, ConfigPlugin};
+use rand::Rng;
 use receive::{left_click, message};
 use resources::ServerLobby;
 use seldom_state::prelude::*;
@@ -79,6 +80,7 @@ fn main() {
             update_combat_state,
             update_open_state,
             send_updates,
+            move_slime,
         )
             .chain()
             .in_schedule(CoreSchedule::FixedUpdate),
@@ -90,8 +92,94 @@ fn main() {
     app.add_startup_system(create_tiles);
     app.add_startup_system(spawn_room.after(create_tiles));
     app.add_startup_system(spawn_dummy);
+    app.add_startup_system(spawn_slime);
     app.add_event::<ClientSetup>();
     app.run();
+}
+#[derive(Component)]
+pub enum MobState {
+    Wonder(Direction),
+    Combat(Entity),
+}
+#[derive(Component)]
+pub struct MobRange {
+    pub top_left: Tile,
+    pub bottom_right: Tile,
+}
+impl MobRange {
+    pub fn check(&self, pos: &Tile) -> bool {
+        let x = pos.cell.0;
+        let z = pos.cell.2;
+
+        let tl_x = self.top_left.cell.0;
+        let tl_z = self.top_left.cell.2;
+
+        let br_x = self.bottom_right.cell.0;
+        let br_z = self.bottom_right.cell.2;
+
+        x >= tl_x && x <= br_x && z >= tl_z && z <= br_z
+    }
+}
+pub fn move_slime(
+    mut query: Query<(Entity, &mut Tile, &MobState, &MobRange), With<Slime>>,
+    tick: Res<Tick>,
+    mut commands: Commands,
+) {
+    if tick.tick == 0 {
+        for (e, mut t, state, range) in query.iter_mut() {
+            if tick.tick % 25 == 0 {
+                let mut rng = rand::thread_rng();
+                let x: u32 = rng.gen_range(0..4);
+                if x == 0 {
+                    commands.entity(e).insert(MobState::Wonder(Direction::East));
+                }
+                if x == 1 {
+                    commands
+                        .entity(e)
+                        .insert(MobState::Wonder(Direction::South));
+                }
+                if x == 2 {
+                    commands.entity(e).insert(MobState::Wonder(Direction::West));
+                }
+                if x == 3 {
+                    commands
+                        .entity(e)
+                        .insert(MobState::Wonder(Direction::North));
+                }
+            }
+            match state {
+                MobState::Wonder(direction) => match direction {
+                    Direction::Bad => (),
+                    Direction::North => {
+                        if range.check(&Tile::new((t.cell.0, t.cell.1, t.cell.2 + 1))) {
+                            t.cell.2 += 1;
+                        }
+                    }
+                    Direction::NorthEast => (),
+                    Direction::East => {
+                        if range.check(&Tile::new((t.cell.0 + 1, t.cell.1, t.cell.2))) {
+                            t.cell.0 += 1;
+                        }
+                    }
+                    Direction::SouthEast => (),
+                    Direction::South => {
+                        if range.check(&Tile::new((t.cell.0, t.cell.1, t.cell.2 - 1))) {
+                            t.cell.2 -= 1;
+                        }
+                    }
+                    Direction::SouthWest => (),
+                    Direction::West => {
+                        if range.check(&Tile::new((t.cell.0 - 1, t.cell.1, t.cell.2))) {
+                            t.cell.0 -= 1;
+                        }
+                    }
+
+                    Direction::NorthWest => (),
+                },
+                MobState::Combat(_) => (),
+            }
+        }
+    }
 }
 const ROOM_SIZE: u32 = 14;
 pub fn spawn_room(mut commands: Commands) {
@@ -191,6 +279,27 @@ pub fn combat_events(
             }
         }
     }
+}
+
+pub fn spawn_slime(mut commands: Commands, mut spawn_event: EventWriter<SpawnEvent>) {
+    let id = commands
+        .spawn((
+            Slime,
+            EntityType::Slime(Slime),
+            Health::new(99),
+            Tile::new((4, 0, 4)),
+            MobState::Wonder(Direction::East),
+            MobRange {
+                top_left: Tile::new((1, 0, 1)),
+                bottom_right: Tile::new((10, 0, 10)),
+            },
+        ))
+        .id();
+    spawn_event.send(SpawnEvent::new(
+        id,
+        EntityType::Slime(Slime),
+        Tile::new((4, 0, 4)),
+    ));
 }
 pub fn spawn_dummy(mut commands: Commands, mut spawn_event: EventWriter<SpawnEvent>) {
     let id = commands

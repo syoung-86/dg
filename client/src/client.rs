@@ -23,8 +23,9 @@ use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     components::{
-        Action, Arch, DespawnEvent, Door, Health, Idle, LeftClick, Open, OpenState, Player,
-        PlayerCommand, Running, SpawnEvent, TickEvent, Tile, Untraversable, UpdateEvent, Wall,
+        Action, Arch, DespawnEvent, Door, FloorTile, Health, HealthBar, Idle, LeftClick, Open,
+        OpenState, Player, PlayerCommand, Running, Slime, SpawnEvent, TickEvent, Tile,
+        Untraversable, UpdateEvent, Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -66,7 +67,11 @@ fn main() {
     app.add_plugin(InputManagerPlugin::<Action>::default());
     app.add_plugin(EasingsPlugin);
     app.add_plugin(OrbitCameraPlugin::default());
-    app.add_plugins(DefaultPickingPlugins);
+    app.add_plugins(
+        DefaultPickingPlugins
+            .build()
+            .disable::<DebugPickingPlugin>(),
+    );
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
     app.insert_resource(Tick::default());
     app.edit_schedule(CoreSchedule::Main, |schedule| {
@@ -114,10 +119,11 @@ fn main() {
     app.add_system(update_trav);
     app.add_system(update_health_bar);
     app.add_system(client_send_player_commands);
-    app.add_system(spawn_slime.run_if(loaded_slime));
+    //app.add_system(spawn_slime.run_if(loaded_slime));
+    app.add_system(spawn_slime);
     app.add_system(load_anims.run_if(should_load_anims));
     app.add_system(find_path);
-    app.add_system(slime_anims.after(spawn_slime));
+    app.add_system(slime_anims);
     app.add_event::<ClickEvent>();
     app.add_event::<PickingEvent>();
     app.add_event::<PlayerCommand>();
@@ -125,6 +131,7 @@ fn main() {
     app.add_event::<DespawnEvent>();
     app.add_event::<UpdateEvent>();
     app.add_event::<TickEvent>();
+    app.add_event::<SpawnSlimeEvent>();
     app.add_event::<InsertUntraversableEvent>();
     app.add_event::<SpawnWallEvent>();
     app.register_type::<Tile>();
@@ -132,6 +139,11 @@ fn main() {
     app.run();
 }
 
+pub struct SpawnSlimeEvent {
+    pub slime: Slime,
+    pub tile: Tile,
+    pub entity: Entity,
+}
 pub struct SpawnWallEvent {
     pub wall: Wall,
     pub tile: Tile,
@@ -157,7 +169,7 @@ pub fn slime_anims(
                 let entity_animate = parent_player_parent.get();
                 for e in slime_query.iter() {
                     if e == entity_animate {
-                        player.play(animations.0[0].clone_weak()).repeat();
+                        player.play(animations.0[1].clone_weak()).repeat();
                     }
                 }
             }
@@ -167,47 +179,36 @@ pub fn slime_anims(
 #[derive(Resource, Default)]
 pub struct SlimeAnimations(pub Vec<Handle<AnimationClip>>);
 
-#[derive(Component)]
-pub struct Slime;
 pub fn spawn_slime(
     mut commands: Commands,
     assets: Res<Assets<Gltf>>,
     slime_scene: Res<SlimeAssetPack>,
     mut loaded: ResMut<LoadedSlime>,
+    mut events: EventReader<SpawnSlimeEvent>,
 ) {
-    if let Some(gltf) = assets.get(&slime_scene.0) {
-        let tile = Tile::new((4, 0, 4));
-        commands.spawn((
-            SceneBundle {
-                scene: gltf.named_scenes.get("Scene").unwrap().clone(),
-                transform: tile.to_transform(),
-                ..Default::default()
-            },
-            tile,
-            Slime,
-        ));
-        let mut animations = SlimeAnimations::default();
-        for animation in gltf.animations.iter() {
-            let cloned = animation.clone();
-            animations.0.push(cloned);
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
-            println!("added slime anim");
+    for event in events.iter() {
+        if let Some(gltf) = assets.get(&slime_scene.0) {
+            commands.entity(event.entity).insert((
+                SceneBundle {
+                    scene: gltf.named_scenes.get("Scene").unwrap().clone(),
+                    transform: event.tile.to_transform(),
+                    ..Default::default()
+                },
+                LeftClick::Attack(event.entity),
+                event.tile,
+                Health::new(99),
+                OnPointer::<Down>::run_callback(test),
+            ));
+            let mut animations = SlimeAnimations::default();
+            for animation in gltf.animations.iter() {
+                let cloned = animation.clone();
+                animations.0.push(cloned);
+            }
+            let hp_bar = commands.spawn((HealthBar,)).id();
+            commands.entity(event.entity).push_children(&[hp_bar]);
+            commands.insert_resource(animations);
+            loaded.0 = false;
         }
-        commands.insert_resource(animations);
-        loaded.0 = false;
     }
 }
 pub fn spawn_cube(
@@ -417,11 +418,14 @@ pub fn mouse_input(
 ) {
     for event in events.iter() {
         if let PickingEvent::Clicked(clicked_entity) = event {
+            commands.entity(*clicked_entity).log_components();
             if let Ok(p) = parent.get(*clicked_entity) {
                 if let Ok(p) = parent.get(p.get()) {
                     if let Ok(p) = parent.get(p.get()) {
+                        //commands.entity(p.get()).log_components();
                         if let Ok((target, left_click, destination)) = &query.get(p.get()) {
-                            //commands.entity(p.get()).log_components();
+                            //println!("target:");
+                            //commands.entity(*target).log_components();
                             click_event.send(ClickEvent::new(*target, **left_click, **destination));
                             match **left_click {
                                 LeftClick::Open(_) => {
@@ -439,17 +443,44 @@ pub fn mouse_input(
         }
     }
 }
+pub fn test(
+    In(event): In<ListenedEvent<Down>>,
+    mut commands: Commands,
+    parent: Query<&Parent>,
+    mut picking_event: EventWriter<PickingEvent>,
+) -> Bubble {
+    //commands.entity(event.target).log_components();
+
+    if let Ok(p) = parent.get(event.target) {
+        if let Ok(p) = parent.get(p.get()) {
+            if let Ok(p) = parent.get(p.get()) {
+                if let Ok(p) = parent.get(p.get()) {
+                    //commands.entity(p.get()).log_components();
+                    picking_event.send(PickingEvent::Clicked(p.get()));
+                }
+            }
+        }
+    }
+    Bubble::Burst
+}
 fn make_pickable(
     mut commands: Commands,
     meshes: Query<Entity, (With<Handle<Mesh>>, Without<RaycastPickTarget>)>,
+    mut pick_event: EventWriter<PickingEvent>,
 ) {
     for entity in meshes.iter() {
         commands.entity(entity).insert((
             PickableBundle::default(),
             RaycastPickTarget::default(),
-            OnPointer::<Down>::send_event::<PickingEvent>(),
             HIGHLIGHT_TINT.clone(),
+            //OnPointer::<Down>::run_callback(test),
+            (OnPointer::<Down>::send_event::<PickingEvent>()),
         ));
+        //if let None = pointer {
+        //commands
+        //.entity(entity)
+        //.insert(OnPointer::<Down>::send_event::<PickingEvent>());
+        //}
     }
 }
 const HIGHLIGHT_TINT: Highlight<StandardMaterial> = Highlight {
