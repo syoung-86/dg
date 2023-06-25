@@ -125,7 +125,7 @@ pub fn move_slime(
     tick: Res<Tick>,
     mut commands: Commands,
 ) {
-    if tick.tick == 0 {
+    if tick.tick % 10 == 0 {
         for (e, mut t, state, range) in query.iter_mut() {
             if tick.tick % 25 == 0 {
                 let mut rng = rand::thread_rng();
@@ -240,27 +240,6 @@ pub fn spawn_room(mut commands: Commands) {
             ));
         }
     }
-    //for (e, tile, e_t) in tiles.iter() {
-    ////println!("inserted untraversable");
-    //if *e_t == EntityType::Tile {
-    //if tile.cell.2 >= 4 && tile.cell.2 <= 10 && tile.cell.0 == 4 {
-    //commands.entity(e).insert(Untraversable);
-    //println!("inserted untraversable")
-    //}
-    //}
-    //}
-    //let untraversable: Vec<Entity> = tiles
-    //.iter()
-    //.filter(|(_entity, tile, e_t)| {
-    //**e_t == EntityType::Tile && tile.cell.2 >= 4 && tile.cell.2 <= 10 && tile.cell.0 == 4
-    //})
-    //.map(|(entity, _tile, _)| (entity))
-    //.collect();
-
-    //for e in untraversable {
-    //commands.entity(e).insert(Untraversable);
-    ////println!("inserted untraversable");
-    //}
 }
 pub fn combat_events(
     mut query: Query<(Entity, &mut Health)>,
@@ -295,6 +274,7 @@ pub fn spawn_slime(mut commands: Commands, mut spawn_event: EventWriter<SpawnEve
             },
         ))
         .id();
+    commands.entity(id).insert(LeftClick::Attack(id));
     spawn_event.send(SpawnEvent::new(
         id,
         EntityType::Slime(Slime),

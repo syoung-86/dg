@@ -9,7 +9,7 @@ pub enum PickingEvent {
 impl From<ListenedEvent<Down>> for PickingEvent {
     fn from(event: ListenedEvent<Down>) -> Self {
         println!("clicked");
-        PickingEvent::Clicked(event.target)
+        PickingEvent::Clicked(event.listener)
     }
 }
 

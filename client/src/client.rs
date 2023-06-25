@@ -197,6 +197,7 @@ pub fn spawn_slime(
                 LeftClick::Attack(event.entity),
                 event.tile,
                 Health::new(99),
+                Slime,
                 OnPointer::<Down>::run_callback(test),
             ));
             let mut animations = SlimeAnimations::default();
@@ -418,25 +419,25 @@ pub fn mouse_input(
 ) {
     for event in events.iter() {
         if let PickingEvent::Clicked(clicked_entity) = event {
-            commands.entity(*clicked_entity).log_components();
-            if let Ok(p) = parent.get(*clicked_entity) {
-                if let Ok(p) = parent.get(p.get()) {
-                    if let Ok(p) = parent.get(p.get()) {
-                        //commands.entity(p.get()).log_components();
-                        if let Ok((target, left_click, destination)) = &query.get(p.get()) {
-                            //println!("target:");
-                            //commands.entity(*target).log_components();
-                            click_event.send(ClickEvent::new(*target, **left_click, **destination));
-                            match **left_click {
-                                LeftClick::Open(_) => {
-                                    commands.entity(*target).insert(LeftClick::Close(*target));
-                                }
-                                _ => (),
-                            }
-                        }
-                    }
-                }
-            }
+            //commands.entity(*clicked_entity).log_components();
+            //if let Ok(p) = parent.get(*clicked_entity) {
+            //if let Ok(p) = parent.get(p.get()) {
+            //if let Ok(p) = parent.get(p.get()) {
+            ////commands.entity(p.get()).log_components();
+            //if let Ok((target, left_click, destination)) = &query.get(p.get()) {
+            ////println!("target:");
+            ////commands.entity(*target).log_components();
+            //click_event.send(ClickEvent::new(*target, **left_click, **destination));
+            //match **left_click {
+            //LeftClick::Open(_) => {
+            //commands.entity(*target).insert(LeftClick::Close(*target));
+            //}
+            //_ => (),
+            //}
+            //}
+            //}
+            //}
+            //}
             if let Ok((target, left_click, destination)) = &query.get(*clicked_entity) {
                 click_event.send(ClickEvent::new(*target, **left_click, **destination));
             }
@@ -449,19 +450,20 @@ pub fn test(
     parent: Query<&Parent>,
     mut picking_event: EventWriter<PickingEvent>,
 ) -> Bubble {
-    //commands.entity(event.target).log_components();
+    //commands.entity(event.listener).log_components();
 
-    if let Ok(p) = parent.get(event.target) {
-        if let Ok(p) = parent.get(p.get()) {
-            if let Ok(p) = parent.get(p.get()) {
-                if let Ok(p) = parent.get(p.get()) {
-                    //commands.entity(p.get()).log_components();
-                    picking_event.send(PickingEvent::Clicked(p.get()));
-                }
-            }
-        }
-    }
-    Bubble::Burst
+    picking_event.send(PickingEvent::Clicked(event.listener));
+    //if let Ok(p) = parent.get(event.target) {
+    //if let Ok(p) = parent.get(p.get()) {
+    //if let Ok(p) = parent.get(p.get()) {
+    //if let Ok(p) = parent.get(p.get()) {
+    ////commands.entity(p.get()).log_components();
+    //picking_event.send(PickingEvent::Clicked(p.get()));
+    //}
+    //}
+    //}
+    //}
+    Bubble::Up
 }
 fn make_pickable(
     mut commands: Commands,
@@ -474,7 +476,7 @@ fn make_pickable(
             RaycastPickTarget::default(),
             HIGHLIGHT_TINT.clone(),
             //OnPointer::<Down>::run_callback(test),
-            (OnPointer::<Down>::send_event::<PickingEvent>()),
+            //(OnPointer::<Down>::send_event::<PickingEvent>()),
         ));
         //if let None = pointer {
         //commands
