@@ -11,7 +11,7 @@ use lib::{
     ClickEvent,
 };
 
-use crate::{resources::ServerLobby, CombatEvent, LeftClickEvent};
+use crate::{resources::ServerLobby, CombatEvent, LeftClickEvent, MobState};
 
 pub fn message(
     mut server: ResMut<RenetServer>,
@@ -114,6 +114,9 @@ pub fn left_click(
                     commands
                         .entity(client.controlled_entity)
                         .insert(Target(Some(e)));
+                    commands
+                        .entity(e)
+                        .insert(MobState::Combat(client.controlled_entity));
                 }
             }
             LeftClick::Open(e) => {

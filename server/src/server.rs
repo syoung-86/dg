@@ -8,7 +8,7 @@ use lib::{
     channels::ServerChannel,
     components::{
         Action, Arch, Client, CombatState, Direction, Door, Dummy, EntityType, Health, LeftClick,
-        OpenState, Player, Scope, Slime, SpawnEvent, SyncEvent, Tile, Untraversable, Wall,
+        OpenState, Player, Scope, Slime, SpawnEvent, SyncEvent, Target, Tile, Untraversable, Wall,
     },
     resources::Tick,
     TickSet,
@@ -124,28 +124,34 @@ pub fn move_slime(
     mut query: Query<(Entity, &mut Tile, &MobState, &MobRange), With<Slime>>,
     tick: Res<Tick>,
     mut commands: Commands,
+    target_query: Query<&Tile, Without<Slime>>,
 ) {
     if tick.tick % 10 == 0 {
         for (e, mut t, state, range) in query.iter_mut() {
-            if tick.tick % 25 == 0 {
-                let mut rng = rand::thread_rng();
-                let x: u32 = rng.gen_range(0..4);
-                if x == 0 {
-                    commands.entity(e).insert(MobState::Wonder(Direction::East));
+            match state {
+                MobState::Wonder(_) => {
+                    if tick.tick % 25 == 0 {
+                        let mut rng = rand::thread_rng();
+                        let x: u32 = rng.gen_range(0..4);
+                        if x == 0 {
+                            commands.entity(e).insert(MobState::Wonder(Direction::East));
+                        }
+                        if x == 1 {
+                            commands
+                                .entity(e)
+                                .insert(MobState::Wonder(Direction::South));
+                        }
+                        if x == 2 {
+                            commands.entity(e).insert(MobState::Wonder(Direction::West));
+                        }
+                        if x == 3 {
+                            commands
+                                .entity(e)
+                                .insert(MobState::Wonder(Direction::North));
+                        }
+                    }
                 }
-                if x == 1 {
-                    commands
-                        .entity(e)
-                        .insert(MobState::Wonder(Direction::South));
-                }
-                if x == 2 {
-                    commands.entity(e).insert(MobState::Wonder(Direction::West));
-                }
-                if x == 3 {
-                    commands
-                        .entity(e)
-                        .insert(MobState::Wonder(Direction::North));
-                }
+                MobState::Combat(_) => (),
             }
             match state {
                 MobState::Wonder(direction) => match direction {
@@ -176,7 +182,19 @@ pub fn move_slime(
 
                     Direction::NorthWest => (),
                 },
-                MobState::Combat(_) => (),
+                MobState::Combat(e) => {
+                    if let Ok(tile) = target_query.get(*e) {
+                        if t.cell.0 < tile.cell.0 + 1 {
+                            t.cell.0 += 1;
+                        } else if t.cell.0 > tile.cell.0 + 1 {
+                            t.cell.0 -= 1;
+                        } else if t.cell.2 < tile.cell.2 + 1 {
+                            t.cell.2 += 1;
+                        } else if t.cell.2 > tile.cell.2 + 1 {
+                            t.cell.2 -= 1;
+                        }
+                    }
+                }
             }
         }
     }
