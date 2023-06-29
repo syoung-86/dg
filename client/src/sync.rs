@@ -14,9 +14,9 @@ use lib::components::{
 
 use crate::{
     assets::{ManAssetPack, WallAssetPack},
-    input::PickingEvent,
+    input::{picking_listener, PickingEvent},
     resources::NetworkMapping,
-    test, InsertUntraversableEvent, PlayerBundle, SpawnSlimeEvent, SpawnWallEvent,
+    InsertUntraversableEvent, PlayerBundle, SpawnSlimeEvent, SpawnWallEvent,
 };
 
 pub fn update(
@@ -161,7 +161,7 @@ pub fn spawn(
                         FloorTile,
                         event.tile,
                         //OnPointer::<Down>::send_event::<PickingEvent>(),
-                        OnPointer::<Down>::run_callback(test),
+                        OnPointer::<Down>::run_callback(picking_listener),
                     ));
                 } else {
                     let transform = event.tile.to_transform();
@@ -317,7 +317,7 @@ pub fn spawn(
                             LeftClick::Open(event.entity),
                             OpenState::Closed,
                             event.tile,
-                            OnPointer::<Down>::run_callback(test),
+                            OnPointer::<Down>::run_callback(picking_listener),
                         ));
                     }
                 }
@@ -365,7 +365,7 @@ pub fn spawn(
                     },
                     LeftClick::Attack(event.entity),
                     Health::new(99),
-                    OnPointer::<Down>::run_callback(test),
+                    OnPointer::<Down>::run_callback(picking_listener),
                 ));
                 let hp_bar = commands.spawn((HealthBar,)).id();
                 commands.entity(event.entity).push_children(&[hp_bar]);

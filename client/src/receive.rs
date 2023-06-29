@@ -56,9 +56,6 @@ pub fn update_message(
     network_mapping: Res<NetworkMapping>,
 ) {
     if let Some(message) = client.receive_message(ServerChannel::Update) {
-        //println!("Received Update Message!");
-        //let (server_entity, component): (Entity, ComponentType) =
-        //bincode::deserialize(&message).unwrap();
         let mut update_message: UpdateEvent = bincode::deserialize(&message).unwrap();
         if let Some(entity) = network_mapping.server.get(&update_message.entity) {
             update_message.entity = *entity;

@@ -1,31 +1,35 @@
-use assets::{
-    load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims, SlimeAssetPack, WallAssetPack,
-};
+use assets::{load_anims, should_load_anims, ManAssetPack, ShouldLoadAnims, WallAssetPack};
 use bevy::{
     ecs::schedule::{LogLevel, ScheduleBuildSettings},
     gltf::Gltf,
-    math::vec4,
     prelude::*,
 };
 use bevy_easings::*;
 use bevy_mod_picking::prelude::*;
-use input::PickingEvent;
-use player::{setup_anims, update_health_bar};
-use player_pathing::find_path;
+use entities::{
+    player::{anims::setup_anims, healthbar::update_health_bar, pathing::find_path},
+    slime::{
+        anims::{slime_anims, SlimeAnimations},
+        extra::{LoadedSlime, SlimeAssetPack, SpawnSlimeEvent},
+        spawn::spawn_slime,
+    },
+};
+use input::{make_pickable, mouse_input, PickingEvent};
 use seldom_state::prelude::*;
 use std::{any::type_name, f32::consts::FRAC_PI_2, time::Duration};
 use sync::{spawn, update};
 
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use bevy_proto::prelude::*;
 use bevy_renet::RenetClientPlugin;
 use camera::{camera_follow, setup_camera};
 use connection::{new_renet_client, server_messages};
 use leafwing_input_manager::prelude::*;
 use lib::{
     components::{
-        Action, Arch, DespawnEvent, Door, FloorTile, Health, HealthBar, Idle, LeftClick, Open,
-        OpenState, Player, PlayerCommand, Running, Slime, SpawnEvent, TickEvent, Tile,
-        Untraversable, UpdateEvent, Wall,
+        Action, DespawnEvent, Door, Health, HealthBar, Idle, LeftClick, Open, OpenState, Player,
+        PlayerCommand, Running, Slime, SpawnEvent, TickEvent, Tile, Untraversable, UpdateEvent,
+        Wall,
     },
     resources::Tick,
     ClickEvent,
@@ -39,10 +43,9 @@ pub mod assets;
 pub mod camera;
 pub mod components;
 pub mod connection;
+pub mod entities;
 pub mod input;
 pub mod movement;
-pub mod player;
-pub mod player_pathing;
 pub mod plugins;
 pub mod receive;
 pub mod resources;
@@ -72,6 +75,7 @@ fn main() {
             .build()
             .disable::<DebugPickingPlugin>(),
     );
+    app.add_plugin(ProtoPlugin::new());
     app.insert_resource(FixedTime::new(Duration::from_millis(100)));
     app.insert_resource(Tick::default());
     app.edit_schedule(CoreSchedule::Main, |schedule| {
@@ -136,82 +140,23 @@ fn main() {
     app.add_event::<SpawnWallEvent>();
     app.register_type::<Tile>();
     app.register_type::<Health>();
+    app.add_startup_system(load_sword_proto);
+    app.add_system(spawn_proto.run_if(prototype_ready("TwoHander").and_then(run_once())));
     app.run();
 }
 
-pub struct SpawnSlimeEvent {
-    pub slime: Slime,
-    pub tile: Tile,
-    pub entity: Entity,
+fn load_sword_proto(mut prototypes: PrototypesMut) {
+    prototypes.load("prototypes/two_hander.prototype.ron");
+}
+
+fn spawn_proto(mut commands: ProtoCommands) {
+    commands.spawn("TwoHander");
 }
 pub struct SpawnWallEvent {
     pub wall: Wall,
     pub tile: Tile,
 }
-//#[bevycheck::system]
-#[derive(Resource)]
-pub struct LoadedSlime(bool);
 
-pub fn loaded_slime(loaded_slime: Res<LoadedSlime>) -> bool {
-    loaded_slime.0
-}
-
-pub fn slime_anims(
-    animations: Res<SlimeAnimations>,
-    mut animation_players: Query<(&Parent, &mut AnimationPlayer)>,
-    player_parent: Query<(Entity, &Parent, &Children)>,
-    slime_query: Query<Entity, With<Slime>>,
-) {
-    for (parent, mut player) in animation_players.iter_mut() {
-        let player_parent_get = parent.get();
-        for (player_parent_entity, parent_player_parent, _) in player_parent.iter() {
-            if player_parent_get == player_parent_entity {
-                let entity_animate = parent_player_parent.get();
-                for e in slime_query.iter() {
-                    if e == entity_animate {
-                        player.play(animations.0[1].clone_weak()).repeat();
-                    }
-                }
-            }
-        }
-    }
-}
-#[derive(Resource, Default)]
-pub struct SlimeAnimations(pub Vec<Handle<AnimationClip>>);
-
-pub fn spawn_slime(
-    mut commands: Commands,
-    assets: Res<Assets<Gltf>>,
-    slime_scene: Res<SlimeAssetPack>,
-    mut loaded: ResMut<LoadedSlime>,
-    mut events: EventReader<SpawnSlimeEvent>,
-) {
-    for event in events.iter() {
-        if let Some(gltf) = assets.get(&slime_scene.0) {
-            commands.entity(event.entity).insert((
-                SceneBundle {
-                    scene: gltf.named_scenes.get("Scene").unwrap().clone(),
-                    transform: event.tile.to_transform(),
-                    ..Default::default()
-                },
-                LeftClick::Attack(event.entity),
-                event.tile,
-                Health::new(99),
-                Slime,
-                OnPointer::<Down>::run_callback(test),
-            ));
-            let mut animations = SlimeAnimations::default();
-            for animation in gltf.animations.iter() {
-                let cloned = animation.clone();
-                animations.0.push(cloned);
-            }
-            let hp_bar = commands.spawn((HealthBar,)).id();
-            commands.entity(event.entity).push_children(&[hp_bar]);
-            commands.insert_resource(animations);
-            loaded.0 = false;
-        }
-    }
-}
 pub fn spawn_cube(
     mut commands: Commands,
     assets: Res<Assets<Gltf>>,
@@ -250,8 +195,6 @@ pub fn spawn_cube(
 // this inserts untrav twice for some reason
 pub struct InsertUntraversableEvent(Tile);
 pub fn update_trav(
-    //walls: Query<&Tile, With<Wall>>,
-    //arches: Query<(&Tile, &Arch)>,
     tiles: Query<(Entity, &Tile), (Without<Untraversable>, Without<OpenState>)>,
     mut events: EventReader<InsertUntraversableEvent>,
     mut commands: Commands,
@@ -262,21 +205,6 @@ pub fn update_trav(
                 commands.entity(e).insert(Untraversable);
             }
         }
-        //for wall in walls.iter() {
-        //if tile.cell == wall.cell {
-        //commands.entity(e).insert(Untraversable);
-        //}
-        //}
-        //for (arch_tile, arch) in arches.iter() {
-        //let mut arch_v_tile: Tile = *arch_tile;
-        //arch_v_tile.cell.2 += 2;
-        //let mut arch_h_tile: Tile = *arch_tile;
-        //arch_h_tile.cell.0 += 2;
-        //match arch {
-        //Arch::Vertical => if tile.cell == arch_tile.cell || tile.cell == arch_tile.cell {},
-        //Arch::Horizontal => (),
-        //}
-        //}
     }
 }
 pub fn auto_attack(
@@ -409,93 +337,3 @@ impl PlayerBundle {
 
 #[derive(Resource, Default)]
 pub struct Animations(pub Vec<Handle<AnimationClip>>);
-
-pub fn mouse_input(
-    mut click_event: EventWriter<ClickEvent>,
-    mut events: EventReader<PickingEvent>,
-    query: Query<(Entity, &LeftClick, &Tile)>,
-    parent: Query<&Parent>,
-    mut commands: Commands,
-) {
-    for event in events.iter() {
-        if let PickingEvent::Clicked(clicked_entity) = event {
-            //commands.entity(*clicked_entity).log_components();
-            //if let Ok(p) = parent.get(*clicked_entity) {
-            //if let Ok(p) = parent.get(p.get()) {
-            //if let Ok(p) = parent.get(p.get()) {
-            ////commands.entity(p.get()).log_components();
-            //if let Ok((target, left_click, destination)) = &query.get(p.get()) {
-            ////println!("target:");
-            ////commands.entity(*target).log_components();
-            //click_event.send(ClickEvent::new(*target, **left_click, **destination));
-            //match **left_click {
-            //LeftClick::Open(_) => {
-            //commands.entity(*target).insert(LeftClick::Close(*target));
-            //}
-            //_ => (),
-            //}
-            //}
-            //}
-            //}
-            //}
-            if let Ok((target, left_click, destination)) = &query.get(*clicked_entity) {
-                click_event.send(ClickEvent::new(*target, **left_click, **destination));
-            }
-        }
-    }
-}
-pub fn test(
-    In(event): In<ListenedEvent<Down>>,
-    mut commands: Commands,
-    parent: Query<&Parent>,
-    mut picking_event: EventWriter<PickingEvent>,
-) -> Bubble {
-    //commands.entity(event.listener).log_components();
-
-    picking_event.send(PickingEvent::Clicked(event.listener));
-    //if let Ok(p) = parent.get(event.target) {
-    //if let Ok(p) = parent.get(p.get()) {
-    //if let Ok(p) = parent.get(p.get()) {
-    //if let Ok(p) = parent.get(p.get()) {
-    ////commands.entity(p.get()).log_components();
-    //picking_event.send(PickingEvent::Clicked(p.get()));
-    //}
-    //}
-    //}
-    //}
-    Bubble::Up
-}
-fn make_pickable(
-    mut commands: Commands,
-    meshes: Query<Entity, (With<Handle<Mesh>>, Without<RaycastPickTarget>)>,
-    mut pick_event: EventWriter<PickingEvent>,
-) {
-    for entity in meshes.iter() {
-        commands.entity(entity).insert((
-            PickableBundle::default(),
-            RaycastPickTarget::default(),
-            HIGHLIGHT_TINT.clone(),
-            //OnPointer::<Down>::run_callback(test),
-            //(OnPointer::<Down>::send_event::<PickingEvent>()),
-        ));
-        //if let None = pointer {
-        //commands
-        //.entity(entity)
-        //.insert(OnPointer::<Down>::send_event::<PickingEvent>());
-        //}
-    }
-}
-const HIGHLIGHT_TINT: Highlight<StandardMaterial> = Highlight {
-    hovered: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
-        base_color: matl.base_color + vec4(-0.5, -0.3, 0.9, 0.8), // hovered is blue
-        ..matl.to_owned()
-    })),
-    pressed: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
-        base_color: matl.base_color + vec4(-0.4, -0.4, 0.8, 0.8), // pressed is a different blue
-        ..matl.to_owned()
-    })),
-    selected: Some(HighlightKind::new_dynamic(|matl| StandardMaterial {
-        base_color: matl.base_color + vec4(-0.4, 0.8, -0.4, 0.0), // selected is green
-        ..matl.to_owned()
-    })),
-};
