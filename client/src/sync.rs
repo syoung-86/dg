@@ -4,19 +4,18 @@ use bevy::{gltf::Gltf, prelude::*};
 use bevy_easings::*;
 use bevy_mod_picking::prelude::*;
 use bevy_renet::renet::RenetClient;
-use bevy_scene_hook::{HookedSceneBundle, SceneHook};
 use leafwing_input_manager::prelude::*;
 use lib::components::{
     Action, Arch, CombatState, ComponentType, ControlledEntity, Door, EntityType, FloorTile,
-    Health, HealthBar, LeftClick, OpenState, SpawnEvent, Sword, Target, Tile, Untraversable,
-    UpdateEvent, Wall,
+    Health, HealthBar, LeftClick, OpenState, SpawnEvent, Sword, Target, Tile,
+    UpdateEvent,
 };
 
 use crate::{
-    assets::{ManAssetPack, WallAssetPack},
-    input::{picking_listener, PickingEvent},
+    assets::ManAssetPack,
+    input::picking_listener,
     resources::NetworkMapping,
-    InsertUntraversableEvent, PlayerBundle, SpawnSlimeEvent, SpawnWallEvent,
+    InsertUntraversableEvent, SpawnSlimeEvent, SpawnWallEvent, entities::{wall::assets::WallAssetPack, player::control::PlayerBundle},
 };
 
 pub fn update(
@@ -147,7 +146,6 @@ pub fn spawn(
     mut untrav_event: EventWriter<InsertUntraversableEvent>,
 ) {
     for event in spawn_event.iter() {
-        let event_tile = event.tile;
         match event.entity_type {
             EntityType::Tile => {
                 if let Some(gltf) = assets.get(&cube_scene.0) {
@@ -160,7 +158,6 @@ pub fn spawn(
                         LeftClick::Walk,
                         FloorTile,
                         event.tile,
-                        //OnPointer::<Down>::send_event::<PickingEvent>(),
                         OnPointer::<Down>::run_callback(picking_listener),
                     ));
                 } else {
@@ -173,13 +170,9 @@ pub fn spawn(
                             ..Default::default()
                         },
                         event.tile,
-                        //PickableBundle::default(),
-                        //RaycastPickTarget::default(),
-                        //NoDeselect,
                         LeftClick::Walk,
                         FloorTile,
                     ));
-                    //.forward_events::<PointerDown, PickingEvent>()
                 }
             }
             EntityType::Player(player) => {
@@ -201,8 +194,7 @@ pub fn spawn(
                     transform.rotate_z(FRAC_PI_2);
                     let hp_bar = commands.spawn((HealthBar,)).id();
                     commands.entity(event.entity).push_children(&[hp_bar]);
-                } //.forward_events::<PointerDown, PickingEvent>()
-                  //
+                }
 
                 println!("spawn player: {:?}", player);
                 if player.id == client.client_id() {
@@ -270,10 +262,7 @@ pub fn spawn(
                                 transform: event.tile.to_transform(),
                                 ..Default::default()
                             },
-                            //LeftClick::Walk,
-                            //FloorTile,
                             event.tile,
-                            //OnPointer::<Down>::send_event::<PickingEvent>(),
                         ));
                         untrav_event.send(InsertUntraversableEvent(event.tile));
                         let mut arch_v_tile: Tile = event.tile;
@@ -291,10 +280,7 @@ pub fn spawn(
                                 transform,
                                 ..Default::default()
                             },
-                            //LeftClick::Walk,
-                            //FloorTile,
                             event.tile,
-                            //OnPointer::<Down>::send_event::<PickingEvent>(),
                         ));
                         untrav_event.send(InsertUntraversableEvent(event.tile));
                         let mut arch_h_tile: Tile = event.tile;
@@ -371,13 +357,6 @@ pub fn spawn(
                 commands.entity(event.entity).push_children(&[hp_bar]);
             }
             EntityType::Slime(slime) => {
-                println!("send spawn slime event");
-                println!("send spawn slime event");
-                println!("send spawn slime event");
-                println!("send spawn slime event");
-                println!("send spawn slime event");
-                println!("send spawn slime event");
-                println!("send spawn slime event");
                 spawn_slime_event.send(SpawnSlimeEvent {
                     tile: event.tile,
                     slime,
