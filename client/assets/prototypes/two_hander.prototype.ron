@@ -1,0 +1,22 @@
+(
+  // The name of this prototype.
+  // It must be unique across all loaded prototypes.
+  // In the future, there will be an optional `package` field
+  // to help ensure uniqueness within a "package".
+  name: "TwoHander",
+  // The unordered mapping of schematics for this prototype.
+  // These are deserialized using the reflection deserializer.
+  schematics: {
+    // This schematic is provided by `bevy_proto` and resolves
+    // to a Bevy `SpriteBundle`:
+//    "bevy_proto::custom::SceneBundle": (
+ //     gltf: AssetPath("two_hander.gltf"),
+ //   ),
+        "bevy_proto::custom::PbrBundle" : (
+         mesh: meshes.add(Mesh::from(shape::Box::new(1., 0.2, 1.))),
+         material: materials.add(Color::rgb(0.2, 0.5, 0.2).into()),
+         transform::from_xyz(4.,4.,4.),,
+         ..Default::default()
+        ),
+  }
+)
