@@ -7,7 +7,7 @@ mutliplayer dungeon crawler written in rust using bevy game engine
 Networked component syncing via macros,  
 Tilebased,  
 A* pathfinding,  
-Animations,  
+Running/Attack Animations,  
 
 
 
